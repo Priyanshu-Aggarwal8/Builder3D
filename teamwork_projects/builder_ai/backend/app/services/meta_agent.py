@@ -975,3 +975,413 @@ class MetaArchitectAgent:
         return building_model
 
 meta_architect_agent = MetaArchitectAgent()
+
+
+# ==============================================================================
+# Pure-Intent AI Prompt to DesignSpec Parser Service (Milestone 1)
+# ==============================================================================
+
+from app.schemas.design_spec import (
+    AestheticPalette,
+    AestheticStyle,
+    BuildingTypology,
+    CorePlacementStrategy,
+    DesignSpec,
+    ElectricalDistributionType,
+    FireProtectionType,
+    HVACType,
+    MaterialSpec,
+    MEPStrategy,
+    OccupancyCategory,
+    PlumbingSystemType,
+    RoomProgram,
+    RoomType,
+    RooftopMEPType,
+    SetbackSpec,
+    SiteParameters,
+    StoreySpec,
+    StoreyUseType,
+    StructuralSystem,
+    UnitRequirement,
+    UnitType,
+    VerticalRiserStrategy,
+    ZoningClassification,
+)
+from app.schemas.spatial import (
+    SpatialNode,
+    compile_design_spec_to_spatial_tree as _compile_tree,
+)
+
+
+def _build_default_rooms_for_unit(unit_type: UnitType) -> List[RoomProgram]:
+    """Generates standard architectural room programs for common unit typologies."""
+    if unit_type == UnitType.BHK1:
+        return [
+            RoomProgram(room_type=RoomType.LIVING_ROOM, name="Living Room", min_area_sqm=18.0, target_area_sqm=20.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.KITCHEN, name="Kitchen", min_area_sqm=7.0, target_area_sqm=8.0, requires_daylight=False, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.MASTER_BEDROOM, name="Master Bedroom", min_area_sqm=12.0, target_area_sqm=14.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.BATHROOM_COMMON, name="Bathroom", min_area_sqm=4.0, target_area_sqm=5.0, requires_daylight=False, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.BALCONY, name="Balcony", min_area_sqm=4.0, target_area_sqm=6.0, requires_daylight=True),
+        ]
+    elif unit_type == UnitType.BHK2:
+        return [
+            RoomProgram(room_type=RoomType.LIVING_ROOM, name="Living Room", min_area_sqm=20.0, target_area_sqm=24.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.DINING_ROOM, name="Dining Room", min_area_sqm=8.0, target_area_sqm=10.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.KITCHEN, name="Kitchen", min_area_sqm=8.0, target_area_sqm=9.0, requires_daylight=False, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.MASTER_BEDROOM, name="Master Bedroom", min_area_sqm=14.0, target_area_sqm=16.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.BATHROOM_ENSUITE, name="Master Ensuite", min_area_sqm=4.0, target_area_sqm=5.0, requires_daylight=False, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.BEDROOM, name="Bedroom 2", min_area_sqm=11.0, target_area_sqm=12.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.BATHROOM_COMMON, name="Common Bathroom", min_area_sqm=3.5, target_area_sqm=4.0, requires_daylight=False, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.BALCONY, name="Living Balcony", min_area_sqm=6.0, target_area_sqm=8.0, requires_daylight=True),
+        ]
+    elif unit_type == UnitType.BHK3:
+        return [
+            RoomProgram(room_type=RoomType.FOYER, name="Entrance Foyer", min_area_sqm=5.0, target_area_sqm=6.0, requires_daylight=False),
+            RoomProgram(room_type=RoomType.LIVING_ROOM, name="Grand Living", min_area_sqm=26.0, target_area_sqm=32.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.DINING_ROOM, name="Dining Room", min_area_sqm=12.0, target_area_sqm=14.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.KITCHEN, name="Modular Kitchen", min_area_sqm=10.0, target_area_sqm=12.0, requires_daylight=False, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.UTILITY_ROOM, name="Utility & Wash", min_area_sqm=4.0, target_area_sqm=5.0, requires_daylight=False, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.MASTER_BEDROOM, name="Master Suite", min_area_sqm=18.0, target_area_sqm=22.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.BATHROOM_ENSUITE, name="Master Bath Ensuite", min_area_sqm=5.5, target_area_sqm=7.0, requires_daylight=False, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.BEDROOM, name="Bedroom 2", min_area_sqm=13.0, target_area_sqm=15.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.BATHROOM_ENSUITE, name="Ensuite 2", min_area_sqm=4.0, target_area_sqm=5.0, requires_daylight=False, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.GUEST_BEDROOM, name="Bedroom 3", min_area_sqm=12.0, target_area_sqm=14.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.BATHROOM_COMMON, name="Common Bath", min_area_sqm=3.5, target_area_sqm=4.0, requires_daylight=False, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.BALCONY, name="Main Balcony", min_area_sqm=6.0, target_area_sqm=8.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.BALCONY, name="Bed Balcony", min_area_sqm=6.0, target_area_sqm=8.0, requires_daylight=True),
+        ]
+    elif unit_type == UnitType.STUDIO:
+        return [
+            RoomProgram(room_type=RoomType.LIVING_ROOM, name="Studio Living & Sleeping", min_area_sqm=22.0, target_area_sqm=26.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.KITCHEN, name="Kitchenette", min_area_sqm=5.0, target_area_sqm=6.0, requires_daylight=False, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.BATHROOM_COMMON, name="Bathroom", min_area_sqm=4.0, target_area_sqm=4.5, requires_daylight=False, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.BALCONY, name="Balcony", min_area_sqm=3.0, target_area_sqm=3.5, requires_daylight=True),
+        ]
+    elif unit_type == UnitType.PENTHOUSE:
+        return [
+            RoomProgram(room_type=RoomType.FOYER, name="Private Foyer", min_area_sqm=10.0, target_area_sqm=12.0, requires_daylight=False),
+            RoomProgram(room_type=RoomType.LIVING_ROOM, name="Sky Lounge & Living", min_area_sqm=45.0, target_area_sqm=55.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.DINING_ROOM, name="Formal Dining", min_area_sqm=18.0, target_area_sqm=22.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.KITCHEN, name="Chef's Kitchen", min_area_sqm=14.0, target_area_sqm=18.0, requires_daylight=True, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.MASTER_BEDROOM, name="Presidential Master Suite", min_area_sqm=28.0, target_area_sqm=35.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.BATHROOM_ENSUITE, name="Master Spa Bath", min_area_sqm=8.0, target_area_sqm=12.0, requires_daylight=True, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.WALK_IN_CLOSET, name="Dressing Suite", min_area_sqm=10.0, target_area_sqm=12.0, requires_daylight=False),
+            RoomProgram(room_type=RoomType.BEDROOM, name="Guest Suite 2", min_area_sqm=18.0, target_area_sqm=22.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.BATHROOM_ENSUITE, name="Guest Bath 2", min_area_sqm=5.0, target_area_sqm=6.0, requires_daylight=False, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.BEDROOM, name="Guest Suite 3", min_area_sqm=16.0, target_area_sqm=20.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.BATHROOM_ENSUITE, name="Guest Bath 3", min_area_sqm=5.0, target_area_sqm=6.0, requires_daylight=False, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.TERRACE, name="Sky Deck Terrace", min_area_sqm=25.0, target_area_sqm=40.0, requires_daylight=True),
+        ]
+    elif unit_type == UnitType.COMMERCIAL_OFFICE:
+        return [
+            RoomProgram(room_type=RoomType.LOBBY, name="Reception Lobby", min_area_sqm=15.0, target_area_sqm=20.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.CONFERENCE_ROOM, name="Main Boardroom", min_area_sqm=25.0, target_area_sqm=35.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.HOME_OFFICE, name="Open Workstation Area", min_area_sqm=60.0, target_area_sqm=80.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.KITCHEN, name="Pantry / Breakroom", min_area_sqm=10.0, target_area_sqm=12.0, requires_plumbing=True),
+            RoomProgram(room_type=RoomType.BATHROOM_COMMON, name="Executive Restrooms", min_area_sqm=10.0, target_area_sqm=12.0, requires_plumbing=True),
+        ]
+    else:
+        # Generic Custom unit
+        return [
+            RoomProgram(room_type=RoomType.LIVING_ROOM, name="Main Area", min_area_sqm=20.0, target_area_sqm=25.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.BEDROOM, name="Room 1", min_area_sqm=12.0, target_area_sqm=15.0, requires_daylight=True),
+            RoomProgram(room_type=RoomType.BATHROOM, name="Bathroom", min_area_sqm=4.0, target_area_sqm=5.0, requires_plumbing=True),
+        ]
+
+
+def parse_prompt_to_design_spec(prompt: str) -> DesignSpec:
+    """
+    Parses unstructured natural language architectural prompts into a strictly valid,
+    pure-intent DesignSpec instance with complete fallback defaults.
+    """
+    p = (prompt or "").strip().lower()
+
+    # 1. Floor Count Extraction
+    floors = 2
+    floor_match = re.search(r'(\d+)\s*(?:-|\s)*(?:story|storey|floor|stories|floors|level|levels)', p)
+    if floor_match:
+        floors = max(1, min(100, int(floor_match.group(1))))
+    elif "single story" in p or "single storey" in p or "bungalow" in p or "1 story" in p or "1 floor" in p:
+        floors = 1
+    elif "two story" in p or "two storey" in p or "2 story" in p or "duplex" in p or "2 floors" in p:
+        floors = 2
+    elif "three story" in p or "three storey" in p or "3 story" in p or "triplex" in p or "3 floors" in p:
+        floors = 3
+    elif "tower" in p or "high rise" in p or "high-rise" in p or "skyscraper" in p:
+        floors = 12
+
+    # 2. Typology Classification
+    if any(k in p for k in ["villa", "mansion", "bungalow", "cottage", "estate"]):
+        typology = BuildingTypology.VILLA
+        occupancy = OccupancyCategory.RESIDENTIAL_SINGLE_FAMILY
+        zoning = ZoningClassification.SUBURBAN_ESTATE
+    elif any(k in p for k in ["tower", "skyscraper", "high rise", "high-rise"]):
+        typology = BuildingTypology.TOWER
+        occupancy = OccupancyCategory.RESIDENTIAL_MULTI_FAMILY
+        zoning = ZoningClassification.RESIDENTIAL_HIGH_DENSITY
+    elif any(k in p for k in ["commercial", "office", "headquarters", "workplace"]):
+        typology = BuildingTypology.COMMERCIAL
+        occupancy = OccupancyCategory.BUSINESS_OFFICE
+        zoning = ZoningClassification.COMMERCIAL_URBAN
+    elif any(k in p for k in ["mixed use", "mixed-use", "retail and residential"]):
+        typology = BuildingTypology.MIXED_USE
+        occupancy = OccupancyCategory.MERCANTILE_RETAIL
+        zoning = ZoningClassification.MIXED_USE_HIGH_DENSITY
+    elif any(k in p for k in ["townhouse", "row house", "rowhouse"]):
+        typology = BuildingTypology.TOWNHOUSE
+        occupancy = OccupancyCategory.RESIDENTIAL_SINGLE_FAMILY
+        zoning = ZoningClassification.RESIDENTIAL_MEDIUM_DENSITY
+    elif any(k in p for k in ["hotel", "resort", "hospitality"]):
+        typology = BuildingTypology.HOSPITALITY
+        occupancy = OccupancyCategory.RESIDENTIAL_MULTI_FAMILY
+        zoning = ZoningClassification.COMMERCIAL_URBAN
+    elif floors >= 6:
+        typology = BuildingTypology.TOWER
+        occupancy = OccupancyCategory.RESIDENTIAL_MULTI_FAMILY
+        zoning = ZoningClassification.RESIDENTIAL_HIGH_DENSITY
+    else:
+        typology = BuildingTypology.RESIDENTIAL
+        occupancy = OccupancyCategory.RESIDENTIAL_MULTI_FAMILY if floors > 2 else OccupancyCategory.RESIDENTIAL_SINGLE_FAMILY
+        zoning = ZoningClassification.RESIDENTIAL_MEDIUM_DENSITY if floors > 2 else ZoningClassification.RESIDENTIAL_LOW_DENSITY
+
+    # 3. Structural System
+    if any(k in p for k in ["mass timber", "timber", "wood", "wooden"]):
+        structural_sys = StructuralSystem.MASS_TIMBER
+    elif any(k in p for k in ["steel", "steel frame"]):
+        structural_sys = StructuralSystem.STEEL_FRAME
+    elif any(k in p for k in ["masonry", "brick", "load bearing"]):
+        structural_sys = StructuralSystem.LOAD_BEARING_MASONRY
+    elif floors >= 15:
+        structural_sys = StructuralSystem.HYBRID_POST_TENSIONED
+    else:
+        structural_sys = StructuralSystem.REINFORCED_CONCRETE_FRAME
+
+    # 4. Aesthetic Style & Palette
+    if any(k in p for k in ["luxury", "calacatta", "marble", "italian", "grand"]):
+        aesthetic_style = AestheticStyle.LUXURY_CALACATTA
+    elif any(k in p for k in ["industrial", "loft", "exposed concrete", "brick"]):
+        aesthetic_style = AestheticStyle.INDUSTRIAL_LOFT
+    elif any(k in p for k in ["biophilic", "sustainable", "green", "plants", "nature"]):
+        aesthetic_style = AestheticStyle.BIOPHILIC_GREEN
+    elif any(k in p for k in ["art deco", "artdeco", "glamour"]):
+        aesthetic_style = AestheticStyle.ART_DECO
+    elif any(k in p for k in ["brutalist", "raw concrete", "monolithic"]):
+        aesthetic_style = AestheticStyle.BRUTALIST_CONCRETE
+    elif any(k in p for k in ["mediterranean", "terracotta", "warm stone"]):
+        aesthetic_style = AestheticStyle.MEDITERRANEAN_WARM
+    elif any(k in p for k in ["contemporary", "modern", "minimalist"]):
+        aesthetic_style = AestheticStyle.CONTEMPORARY_MODERN
+    else:
+        aesthetic_style = AestheticStyle.JAPANDI_SCANDINAVIAN
+
+    # 5. MEP Strategy
+    if any(k in p for k in ["chilled water", "central chiller"]):
+        hvac = HVACType.CENTRAL_CHILLED_WATER
+    elif any(k in p for k in ["split", "split ac"]):
+        hvac = HVACType.SPLIT_DX
+    elif any(k in p for k in ["natural ventilation", "passive"]):
+        hvac = HVACType.NATURAL_VENTILATION_WITH_FANS
+    else:
+        hvac = HVACType.VRF_MULTI_SPLIT
+
+    rooftop = RooftopMEPType.SOLAR_PV_ARRAY
+    if any(k in p for k in ["infinity pool", "pool", "swimming"]):
+        rooftop = RooftopMEPType.INFINITY_POOL_HYDRAULICS
+    elif any(k in p for k in ["sky lounge", "rooftop terrace", "pergola"]):
+        rooftop = RooftopMEPType.SKY_LOUNGE_WITH_PERGOLA
+    elif any(k in p for k in ["cooling tower"]):
+        rooftop = RooftopMEPType.COOLING_TOWERS_AND_SCREENING
+
+    mep = MEPStrategy(
+        hvac_type=hvac,
+        core_placement=CorePlacementStrategy.CENTRAL_CORE,
+        riser_strategy=VerticalRiserStrategy.COAXIAL_STACKED_SHAFTS,
+        electrical_distribution=ElectricalDistributionType.BUSBAR_RISER_3PHASE if floors >= 4 else ElectricalDistributionType.CONDUIT_CHASES_PER_FLOOR,
+        plumbing_system=PlumbingSystemType.TWO_PIPE_SOIL_WASTE,
+        fire_protection=FireProtectionType.PRESSURIZED_STAIRS_WET_RISER if floors >= 4 else FireProtectionType.SPRINKLER_SYSTEM,
+        rooftop_mep=rooftop,
+        solar_capacity_kwp=24.0 if floors >= 4 else 10.0,
+        water_storage_liters=25000.0 if floors >= 4 else 5000.0,
+        has_emergency_generator=(floors >= 4),
+    )
+
+    # 6. Site Parameters & Setbacks
+    # Check for dimension keywords
+    dim_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:m|meter|meters)?\s*(?:x|by|\*)\s*(\d+(?:\.\d+)?)\s*(?:m|meter|meters)?', p)
+    if dim_match:
+        w = float(dim_match.group(1))
+        d = float(dim_match.group(2))
+        plot_w = max(15.0, w)
+        plot_d = max(15.0, d)
+        plot_area = plot_w * plot_d
+    else:
+        if typology == BuildingTypology.TOWER or floors >= 6:
+            plot_w, plot_d, plot_area = 40.0, 50.0, 2000.0
+        elif typology == BuildingTypology.VILLA:
+            plot_w, plot_d, plot_area = 25.0, 30.0, 750.0
+        elif typology == BuildingTypology.COMMERCIAL:
+            plot_w, plot_d, plot_area = 35.0, 45.0, 1575.0
+        else:
+            plot_w, plot_d, plot_area = 30.0, 40.0, 1200.0
+
+    front_sb = min(4.5, plot_d * 0.15)
+    rear_sb = min(3.0, plot_d * 0.10)
+    side_sb = min(2.5, plot_w * 0.10)
+
+    site_params = SiteParameters(
+        plot_width_m=plot_w,
+        plot_depth_m=plot_d,
+        total_area_sqm=plot_area,
+        setbacks=SetbackSpec(
+            front_m=round(front_sb, 1),
+            rear_m=round(rear_sb, 1),
+            side_left_m=round(side_sb, 1),
+            side_right_m=round(side_sb, 1),
+        ),
+        zoning=zoning,
+        max_far=4.5 if floors >= 6 else 2.5,
+        max_ground_coverage_ratio=0.55 if floors >= 6 else 0.65,
+        orientation_degrees=0.0,
+    )
+
+    # 7. Unit Requirements & Storeys
+    has_studio = "studio" in p
+    has_1bhk = "1bhk" in p or "1 bhk" in p or "1 bedroom" in p or "one bedroom" in p
+    has_2bhk = "2bhk" in p or "2 bhk" in p or "2 bedroom" in p or "two bedroom" in p
+    has_3bhk = "3bhk" in p or "3 bhk" in p or "3 bedroom" in p or "three bedroom" in p
+    has_4bhk = "4bhk" in p or "4 bhk" in p or "4 bedroom" in p
+    has_penthouse = "penthouse" in p
+    has_office = "office" in p or typology == BuildingTypology.COMMERCIAL
+
+    # Determine default unit mix per floor
+    floor_units_template: List[Tuple[UnitType, float]] = []
+    if has_office:
+        floor_units_template.append((UnitType.COMMERCIAL_OFFICE, 180.0))
+    else:
+        if has_studio:
+            floor_units_template.append((UnitType.STUDIO, 40.0))
+        if has_1bhk:
+            floor_units_template.append((UnitType.BHK1, 55.0))
+        if has_2bhk:
+            floor_units_template.append((UnitType.BHK2, 90.0))
+        if has_3bhk:
+            floor_units_template.append((UnitType.BHK3, 160.0))
+        if has_4bhk:
+            floor_units_template.append((UnitType.BHK4, 210.0))
+        if has_penthouse:
+            floor_units_template.append((UnitType.PENTHOUSE, 280.0))
+
+        if not floor_units_template:
+            # Smart defaults based on typology
+            if typology == BuildingTypology.VILLA:
+                floor_units_template = [(UnitType.BHK3, 160.0)]
+            elif typology == BuildingTypology.TOWER or floors >= 6:
+                floor_units_template = [(UnitType.BHK2, 90.0), (UnitType.BHK3, 160.0)]
+            elif floors == 1:
+                floor_units_template = [(UnitType.BHK2, 90.0)]
+            else:
+                floor_units_template = [(UnitType.BHK2, 90.0)]
+
+    # Floor heights
+    f2f_height = 3.5 if typology == BuildingTypology.COMMERCIAL else 3.2
+    ground_height = 4.0 if (typology in [BuildingTypology.TOWER, BuildingTypology.COMMERCIAL, BuildingTypology.MIXED_USE]) else 3.6
+
+    # Build StoreySpec sequence
+    storeys_list: List[StoreySpec] = []
+    current_elevation = 0.0
+
+    for s_idx in range(floors):
+        is_grd = (s_idx == 0)
+        is_roof = (s_idx == floors - 1)
+        h = ground_height if is_grd else f2f_height
+
+        s_name = "Ground Floor" if is_grd else f"Level {s_idx}"
+        if is_roof and floors > 1:
+            s_name = f"Level {s_idx} (Penthouse / Sky Deck)" if (has_penthouse or floors >= 8) else f"Level {s_idx}"
+
+        # Target Storey Use
+        if is_grd and (typology == BuildingTypology.TOWER or typology == BuildingTypology.COMMERCIAL):
+            use_type = StoreyUseType.COMMERCIAL_LOBBY if typology == BuildingTypology.TOWER else StoreyUseType.RETAIL
+        elif is_roof and (has_penthouse or floors >= 8):
+            use_type = StoreyUseType.AMENITY_SKY_LOUNGE
+        elif typology == BuildingTypology.COMMERCIAL:
+            use_type = StoreyUseType.OFFICE
+        else:
+            use_type = StoreyUseType.RESIDENTIAL
+
+        # Unit mix for this floor
+        unit_mix_for_storey: List[UnitRequirement] = []
+        if is_roof and (has_penthouse or (floors >= 8 and "penthouse" in p)):
+            penthouse_rooms = _build_default_rooms_for_unit(UnitType.PENTHOUSE)
+            unit_mix_for_storey.append(
+                UnitRequirement(
+                    unit_id=f"u_{s_idx}_ph",
+                    unit_type=UnitType.PENTHOUSE,
+                    name=f"Penthouse Suite {s_idx}01",
+                    target_area_sqm=280.0,
+                    required_rooms=penthouse_rooms,
+                    balcony_count=2,
+                    private_access=True,
+                )
+            )
+        else:
+            for u_sub_idx, (u_type, u_area) in enumerate(floor_units_template):
+                rooms = _build_default_rooms_for_unit(u_type)
+                u_name = f"Unit {s_idx}{u_sub_idx + 1:02d} ({u_type.value})"
+                unit_mix_for_storey.append(
+                    UnitRequirement(
+                        unit_id=f"u_{s_idx}_{u_sub_idx + 1:02d}",
+                        unit_type=u_type,
+                        name=u_name,
+                        target_area_sqm=u_area,
+                        required_rooms=rooms,
+                        balcony_count=2 if u_type in [UnitType.BHK3, UnitType.BHK4] else 1,
+                    )
+                )
+
+        storeys_list.append(
+            StoreySpec(
+                storey_index=s_idx,
+                name=s_name,
+                elevation_m=round(current_elevation, 2),
+                height_m=round(h, 2),
+                is_ground=is_grd,
+                is_rooftop=is_roof,
+                is_basement=False,
+                target_use=use_type,
+                unit_mix=unit_mix_for_storey,
+            )
+        )
+        current_elevation += h
+
+    # Project Name
+    proj_title = f"{floors}-Story {typology.value} ({aesthetic_style.value})"
+    if "villa" in p:
+        proj_title = f"{aesthetic_style.value} Modern Villa"
+    elif "tower" in p or floors >= 8:
+        proj_title = f"{floors}-Story {aesthetic_style.value} Tower"
+
+    spec = DesignSpec(
+        spec_id=str(uuid.uuid4()),
+        project_name=proj_title,
+        description=f"Generated architectural DesignSpec from prompt: {prompt[:200]}",
+        version="1.0.0",
+        site=site_params,
+        building_typology=typology,
+        occupancy_category=occupancy,
+        structural_system=structural_sys,
+        total_storeys=floors,
+        floor_to_floor_height_m=round(f2f_height, 2),
+        ground_floor_height_m=round(ground_height, 2),
+        basement_storeys=0,
+        storeys=storeys_list,
+        mep_strategy=mep,
+        aesthetic_palette=AestheticPalette(style=aesthetic_style),
+    )
+
+    return spec
+
+
+def compile_design_spec_to_spatial_hierarchy(spec: DesignSpec) -> SpatialNode:
+    """Compiles a DesignSpec into a canonical SpatialNode tree."""
+    return _compile_tree(spec)
