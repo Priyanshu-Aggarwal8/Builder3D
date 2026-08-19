@@ -390,8 +390,8 @@ export const ThreeViewport: React.FC<ThreeViewportProps> = ({
       group.remove(child);
     }
 
-    // Determine if detailed composite furniture models should be instantiated
-    const isDetailedInteriorMode = isFirstPerson || selectedFloor !== null || lodLevel === 'apartment';
+    // Enable detailed composite CAD models for all interactive views
+    const isCompositeAvailable = renderMode === 'shaded' && !isMepGhosting && lodLevel !== 'mep';
 
     Object.values(model.layers || {}).forEach((layer) => {
       const isVisible = layerVisibility[layer.id] ?? layer.visible;
@@ -427,15 +427,31 @@ export const ThreeViewport: React.FC<ThreeViewportProps> = ({
         const nameLower = el.name.toLowerCase();
         const baseColor = el.material?.color || (layer.id === 'electrical' ? '#F59E0B' : layer.id === 'plumbing' ? '#06B6D4' : '#E2E8F0');
 
-        const isCompositeAvailable = renderMode === 'shaded' && !isMepGhosting && lodLevel !== 'mep' && isDetailedInteriorMode;
         let renderedObject: THREE.Object3D | null = null;
 
         if (isCompositeAvailable) {
-          if (nameLower.includes('sofa') || nameLower.includes('couch') || nameLower.includes('sectional')) {
+          // 1. Elevator & Core Lobbie (replaces solid black blocks!)
+          if (nameLower.includes('lift_shaft') || nameLower.includes('elevator')) {
+            renderedObject = ArchVizCompositeModels.createElevatorCoreComposite(w, h, d, baseColor);
+          } else if (nameLower.includes('stair_core') || (nameLower.includes('stair') && !nameLower.includes('barstool'))) {
+            renderedObject = ArchVizCompositeModels.createStairCoreComposite(w, h, d, baseColor);
+          }
+          // 2. Commercial Workstations & Office Furnishings
+          else if (nameLower.includes('workstation') || nameLower.includes('cluster') || nameLower.includes('desk_pod')) {
+            renderedObject = ArchVizCompositeModels.createWorkstationClusterComposite(w, d, baseColor);
+          } else if (nameLower.includes('boardroom') || (nameLower.includes('conference') && nameLower.includes('table'))) {
+            renderedObject = ArchVizCompositeModels.createBoardroomConferenceComposite(w, d, baseColor);
+          } else if (nameLower.includes('task_chair') || (nameLower.includes('chair') && !nameLower.includes('table') && !nameLower.includes('dining'))) {
+            renderedObject = ArchVizCompositeModels.createErgonomicTaskChairComposite(baseColor);
+          } else if (nameLower.includes('focus_pod') || nameLower.includes('phone_pod')) {
+            renderedObject = ArchVizCompositeModels.createFocusPodComposite(baseColor);
+          }
+          // 3. Residential Sofas, Kitchens & Beds
+          else if (nameLower.includes('sofa') || nameLower.includes('couch') || nameLower.includes('sectional') || nameLower.includes('lounge_sofa')) {
             renderedObject = ArchVizCompositeModels.createSofaComposite(w, d, baseColor);
-          } else if (nameLower.includes('kitchen') || nameLower.includes('island')) {
+          } else if (nameLower.includes('kitchen') || nameLower.includes('island') || nameLower.includes('cafe_island')) {
             renderedObject = ArchVizCompositeModels.createKitchenIslandComposite(w, d, h);
-          } else if (nameLower.includes('platform_bed') || (nameLower.includes('bed') && !nameLower.includes('nightstand') && !nameLower.includes('lamp'))) {
+          } else if (nameLower.includes('platform_bed') || (nameLower.includes('bed') && !nameLower.includes('nightstand') && !nameLower.includes('lamp') && !nameLower.includes('media'))) {
             renderedObject = ArchVizCompositeModels.createMasterBedComposite(baseColor);
           } else if (nameLower.includes('dining')) {
             renderedObject = ArchVizCompositeModels.createDiningSetComposite();

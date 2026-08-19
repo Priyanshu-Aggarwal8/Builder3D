@@ -193,7 +193,13 @@ export async function fetchProjectModel(projectId = 1): Promise<BuildingModel> {
   }
 }
 
-export async function generateBimLayout(projectId: number, prompt: string): Promise<BuildingModel> {
+export async function generateBimLayout(
+  arg1: string | number,
+  arg2?: string | number
+): Promise<BuildingModel> {
+  const prompt = typeof arg1 === 'string' ? arg1 : typeof arg2 === 'string' ? arg2 : 'Modern Building';
+  const projectId = typeof arg1 === 'number' ? arg1 : typeof arg2 === 'number' ? arg2 : 1;
+
   try {
     const res = await fetch(`${API_BASE_URL}/chat/generate`, {
       method: 'POST',

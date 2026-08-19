@@ -4,7 +4,7 @@ import {
   Layers, Sun, HelpCircle, Eye, EyeOff, Sparkles, Send, Check, X, ArrowLeft,
   Zap, SplitSquareVertical, Palette, Bot, Upload, ShieldCheck, Video, Moon, Sunset,
   ChevronDown, Maximize2, Compass, Move, Box, RotateCw, GitBranch, Cpu, Ruler, Download,
-  FolderGit2, Footprints, Plus, Home
+  FolderGit2, Footprints, Plus, Home, Image as ImageIcon
 } from 'lucide-react';
 import { ThreeViewport, LightingPreset } from '../components/three/ThreeViewport';
 import { FloorplanModal } from '../components/studio/FloorplanModal';
@@ -14,6 +14,7 @@ import { SpatialHierarchyNav } from '../components/studio/SpatialHierarchyNav';
 import { SpeckleVersionGraph } from '../components/studio/SpeckleVersionGraph';
 import { MagiCadSpecSheet } from '../components/studio/MagiCadSpecSheet';
 import { SavedManifestsModal } from '../components/studio/SavedManifestsModal';
+import { ReferenceGalleryModal, ReferenceItem } from '../components/studio/ReferenceGalleryModal';
 import { BuildingModel, ModelElement, RenderMode } from '../types/model';
 import { generateBimLayout, sanitizeBuildingModel } from '../services/api';
 import { LodLevel, getModelForLod } from '../services/lodHierarchy';
@@ -56,6 +57,7 @@ export const StudioPage: React.FC<StudioPageProps> = ({
   const [showSpeckleGraph, setShowSpeckleGraph] = useState(false);
   const [showMagiCadSheet, setShowMagiCadSheet] = useState(false);
   const [showManifestsModal, setShowManifestsModal] = useState(false);
+  const [showReferenceGallery, setShowReferenceGallery] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [statusToast, setStatusToast] = useState<string | null>(null);
 
@@ -384,6 +386,20 @@ export const StudioPage: React.FC<StudioPageProps> = ({
 
         {/* Right: Action Controls */}
         <div className="flex items-center gap-1.5 md:gap-2 pointer-events-auto">
+          {/* Architectural Reference & CAD Moodboards */}
+          <button
+            onClick={() => setShowReferenceGallery(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+              isLight
+                ? 'bg-white border-black/80 text-black hover:bg-neutral-100'
+                : 'bg-black border-white/20 text-white hover:bg-neutral-900'
+            }`}
+            title="Architectural References & CAD Gallery"
+          >
+            <ImageIcon className="w-3.5 h-3.5 text-[#D4FF32] stroke-[2]" />
+            <span className="hidden sm:inline">CAD References</span>
+          </button>
+
           {/* Saved Manifests Library */}
           <button
             onClick={() => setShowManifestsModal(true)}
@@ -899,6 +915,24 @@ export const StudioPage: React.FC<StudioPageProps> = ({
           handleApplyNewModel(m, "Extruded from Floor Plan PDF");
           setSelectedFloor(null);
           setExplodeRatio(0);
+        }}
+      />
+
+      {/* 14. Architectural CAD & Typology Reference Gallery */}
+      <ReferenceGalleryModal
+        isOpen={showReferenceGallery}
+        onClose={() => setShowReferenceGallery(false)}
+        onApplyPrompt={async (promptText) => {
+          setStatusToast(`Synthesizing CAD model from reference: "${promptText}"...`);
+          try {
+            const newModel = await generateBimLayout(promptText);
+            handleApplyNewModel(newModel, `Synthesized from Reference: ${promptText}`);
+            setSelectedFloor(null);
+            setExplodeRatio(0);
+          } catch (err) {
+            console.error("Reference synthesis error:", err);
+            setStatusToast("Error generating model from reference");
+          }
         }}
       />
 

@@ -441,19 +441,19 @@ class MetaArchitectAgent:
                 "id": uid(f"lift_shaft_L{f_num}"),
                 "layer_id": "structural",
                 "type": "wall",
-                "name": f"Level {f_num} Dual Elevator Shaft Core",
+                "name": f"Level {f_num} Dual Elevator Shaft Core & Lobby",
                 "position": [0, y_base + h_floor / 2, -1.5],
                 "dimensions": {"width": 3.6, "height": h_floor, "depth": 3.0},
-                "material": {"color": "#1E293B"}
+                "material": {"color": mats.get("wall", "#F1F5F9")}
             })
             elements.append({
                 "id": uid(f"stair_core_L{f_num}"),
                 "layer_id": "structural",
                 "type": "wall",
-                "name": f"Level {f_num} Fire Escape Stair Core",
+                "name": f"Level {f_num} Fire Escape Stair Core Enclosure",
                 "position": [0, y_base + h_floor / 2, 2.0],
                 "dimensions": {"width": 3.6, "height": h_floor, "depth": 2.8},
-                "material": {"color": "#1E293B"}
+                "material": {"color": mats.get("wall", "#F1F5F9")}
             })
 
             # 5. Exterior Curtain Glazing & Mullions
