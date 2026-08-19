@@ -41,9 +41,10 @@ class MetaArchitectAgent:
         has_city = any(k in p for k in ["city", "urban district", "downtown", "metropolis", "cityscape", "skyline"])
         has_society = any(k in p for k in ["society", "gated community", "masterplan", "campus", "enclave", "multiple towers", "condo complex", "residential complex"])
         
-        is_apartment = any(k in p for k in ["bhk", "apartment", "apartments", "flat", "flats", "houses per floor", "residential building"]) or floors >= 4
-        has_2bhk = "2bhk" in p or "2 bhk" in p or "2 bedroom" in p
-        has_3bhk = "3bhk" in p or "3 bhk" in p or "3 bedroom" in p
+        is_commercial = any(k in p for k in ["commercial", "office", "headquarters", "workplace", "workstation", "boardroom", "corporate", "grade-a", "grade a", "business"])
+        is_apartment = not is_commercial and (any(k in p for k in ["bhk", "apartment", "apartments", "flat", "flats", "houses per floor", "residential building"]) or (floors >= 4 and not is_commercial))
+        has_2bhk = not is_commercial and ("2bhk" in p or "2 bhk" in p or "2 bedroom" in p or is_apartment)
+        has_3bhk = not is_commercial and ("3bhk" in p or "3 bhk" in p or "3 bedroom" in p or is_apartment)
         
         if is_apartment and not (has_2bhk or has_3bhk):
             has_2bhk = True
@@ -52,7 +53,7 @@ class MetaArchitectAgent:
         has_pool = any(k in p for k in ["pool", "swimming", "jacuzzi", "infinity pool"])
         has_fire_pit = any(k in p for k in ["fire pit", "firepit", "fireplace"])
         has_solar = any(k in p for k in ["solar", "photovoltaic", "pv array", "green energy"]) or floors >= 6
-        has_balcony = "balcony" in p or "balconies" in p or is_apartment
+        has_balcony = not is_commercial and ("balcony" in p or "balconies" in p or is_apartment)
 
         style = "Japandi Scandinavian"
         if any(k in p for k in ["luxury", "italian", "marble", "calacatta", "mansion", "penthouse"]):
@@ -69,6 +70,7 @@ class MetaArchitectAgent:
             "has_city": has_city,
             "has_society": has_society,
             "is_apartment": is_apartment,
+            "is_commercial": is_commercial,
             "has_2bhk": has_2bhk,
             "has_3bhk": has_3bhk,
             "has_pool": has_pool,
@@ -212,13 +214,14 @@ class MetaArchitectAgent:
 
         floors = spec["floors"]
         is_apartment = spec["is_apartment"]
-        h_floor = 3.2
+        is_commercial = spec.get("is_commercial", False)
+        h_floor = 3.8 if is_commercial else 3.2
         total_height = floors * h_floor
 
         elements: List[Dict[str, Any]] = []
 
-        w_bldg = 26.0 if is_apartment else 16.0
-        d_bldg = 18.0 if is_apartment else 13.0
+        w_bldg = 32.0 if is_commercial else 26.0 if is_apartment else 16.0
+        d_bldg = 22.0 if is_commercial else 18.0 if is_apartment else 13.0
 
         # Ground Grade Granite Plaza Platform
         elements.append({
@@ -837,6 +840,235 @@ class MetaArchitectAgent:
                     "material": {"color": mats["glass"], "opacity": 0.4}
                 })
 
+            # =========================================================================
+            # 7B. GRADE-A COMMERCIAL OFFICE FLOORPLATE (WORKSTATIONS, BOARDROOM, PANTRY, RESTROOMS)
+            # =========================================================================
+            if is_commercial:
+                # 1. Reception & Visitor Waiting Lounge (West Front)
+                elements.append({
+                    "id": uid(f"com_rec_wall_L{f_num}"),
+                    "layer_id": "structural",
+                    "type": "wall",
+                    "name": f"L{f_num} Reception Acoustic Timber Feature Wall",
+                    "position": [-w_bldg / 4 - 2.0, y_base + h_floor / 2, -d_bldg / 4],
+                    "dimensions": {"width": 4.5, "height": h_floor, "depth": 0.15},
+                    "material": {"color": mats["accent"]}
+                })
+                elements.append({
+                    "id": uid(f"com_rec_desk_L{f_num}"),
+                    "layer_id": "structural",
+                    "type": "fixture",
+                    "name": f"L{f_num} Executive Reception Desk & Granite Top",
+                    "position": [-w_bldg / 4 - 2.0, y_base + 0.55, -d_bldg / 4 + 1.2],
+                    "dimensions": {"width": 2.8, "height": 1.05, "depth": 0.9},
+                    "material": {"color": "#1E293B"}
+                })
+                elements.append({
+                    "id": uid(f"com_lounge_sofa_L{f_num}"),
+                    "layer_id": "structural",
+                    "type": "fixture",
+                    "name": f"L{f_num} Visitor Lounge 3-Seater Sofa",
+                    "position": [-w_bldg / 4 - 2.0, y_base + 0.45, -d_bldg / 4 + 3.6],
+                    "dimensions": {"width": 2.6, "height": 0.8, "depth": 1.0},
+                    "material": {"color": mats["furniture"]}
+                })
+                elements.append({
+                    "id": uid(f"com_lounge_table_L{f_num}"),
+                    "layer_id": "structural",
+                    "type": "fixture",
+                    "name": f"L{f_num} Calacatta Marble Reception Coffee Table",
+                    "position": [-w_bldg / 4 - 2.0, y_base + 0.22, -d_bldg / 4 + 2.5],
+                    "dimensions": {"width": 1.4, "height": 0.38, "depth": 0.8},
+                    "material": {"color": "#F8FAFC"}
+                })
+
+                # 2. Collaborative Open-Plan Workstation Desking (West & Center Zones)
+                for pod_idx, (pos_x, pos_z) in enumerate([
+                    (-w_bldg / 4 - 2.0, 2.5),
+                    (-w_bldg / 4 - 2.0, 6.5),
+                    (-w_bldg / 4 + 3.5, 2.5),
+                    (-w_bldg / 4 + 3.5, 6.5),
+                ]):
+                    elements.append({
+                        "id": uid(f"com_desk_pod_{pod_idx+1}_L{f_num}"),
+                        "layer_id": "structural",
+                        "type": "fixture",
+                        "name": f"L{f_num} 6-Person Sit-Stand Workstation Cluster {pod_idx+1}",
+                        "position": [pos_x, y_base + 0.4, pos_z],
+                        "dimensions": {"width": 3.6, "height": 0.75, "depth": 1.4},
+                        "material": {"color": "#E2E8F0"}
+                    })
+                    # Ergonomic Mesh Task Chairs for each desk pod
+                    for chair_i, (cx_off, cz_off) in enumerate([
+                        (-1.2, -0.9), (0.0, -0.9), (1.2, -0.9),
+                        (-1.2, 0.9), (0.0, 0.9), (1.2, 0.9)
+                    ]):
+                        elements.append({
+                            "id": uid(f"com_chair_{pod_idx+1}_{chair_i+1}_L{f_num}"),
+                            "layer_id": "structural",
+                            "type": "fixture",
+                            "name": f"L{f_num} Ergonomic Mesh Task Chair",
+                            "position": [pos_x + cx_off, y_base + 0.45, pos_z + cz_off],
+                            "dimensions": {"width": 0.6, "height": 0.9, "depth": 0.6},
+                            "material": {"color": "#0F172A"}
+                        })
+
+                # 3. 14-Person Executive Boardroom (East Wing)
+                elements.append({
+                    "id": uid(f"com_boardroom_glass_w_L{f_num}"),
+                    "layer_id": "structural",
+                    "type": "window",
+                    "name": f"L{f_num} Executive Boardroom Acoustic Glass Partition West",
+                    "position": [w_bldg / 4 - 3.5, y_base + h_floor / 2, 2.5],
+                    "dimensions": {"width": 0.1, "height": h_floor, "depth": 8.0},
+                    "material": {"color": mats["glass"], "opacity": 0.35, "transmission": 0.9}
+                })
+                elements.append({
+                    "id": uid(f"com_boardroom_glass_s_L{f_num}"),
+                    "layer_id": "structural",
+                    "type": "window",
+                    "name": f"L{f_num} Executive Boardroom Acoustic Glass Partition South",
+                    "position": [w_bldg / 4 + 1.0, y_base + h_floor / 2, -1.5],
+                    "dimensions": {"width": 9.0, "height": h_floor, "depth": 0.1},
+                    "material": {"color": mats["glass"], "opacity": 0.35, "transmission": 0.9}
+                })
+                elements.append({
+                    "id": uid(f"com_boardroom_table_L{f_num}"),
+                    "layer_id": "structural",
+                    "type": "fixture",
+                    "name": f"L{f_num} Solid Walnut 14-Person Conference Table",
+                    "position": [w_bldg / 4 + 1.0, y_base + 0.42, 2.5],
+                    "dimensions": {"width": 4.8, "height": 0.76, "depth": 1.4},
+                    "material": {"color": mats["accent"]}
+                })
+                elements.append({
+                    "id": uid(f"com_boardroom_media_L{f_num}"),
+                    "layer_id": "structural",
+                    "type": "fixture",
+                    "name": f"L{f_num} 85\" 4K Videoconferencing Presentation Wall",
+                    "position": [w_bldg / 4 + 5.2, y_base + 1.8, 2.5],
+                    "dimensions": {"width": 0.15, "height": 1.6, "depth": 3.2},
+                    "material": {"color": "#0F172A"}
+                })
+                for b_chair_i, b_cz in enumerate([-2.0, -1.2, -0.4, 0.4, 1.2, 2.0]):
+                    elements.append({
+                        "id": uid(f"com_board_chair_n_{b_chair_i+1}_L{f_num}"),
+                        "layer_id": "structural",
+                        "type": "fixture",
+                        "name": f"L{f_num} Executive Boardroom Swivel Chair",
+                        "position": [w_bldg / 4 + 1.0 - 0.9, y_base + 0.48, 2.5 + b_cz],
+                        "dimensions": {"width": 0.65, "height": 0.95, "depth": 0.65},
+                        "material": {"color": "#1E293B"}
+                    })
+                    elements.append({
+                        "id": uid(f"com_board_chair_s_{b_chair_i+1}_L{f_num}"),
+                        "layer_id": "structural",
+                        "type": "fixture",
+                        "name": f"L{f_num} Executive Boardroom Swivel Chair",
+                        "position": [w_bldg / 4 + 1.0 + 0.9, y_base + 0.48, 2.5 + b_cz],
+                        "dimensions": {"width": 0.65, "height": 0.95, "depth": 0.65},
+                        "material": {"color": "#1E293B"}
+                    })
+
+                # 4. 3x Private Focus / Acoustic Phone Pods
+                for pod_i, pod_x in enumerate([w_bldg / 4 - 2.5, w_bldg / 4 - 0.5, w_bldg / 4 + 1.5]):
+                    elements.append({
+                        "id": uid(f"com_focus_pod_{pod_i+1}_L{f_num}"),
+                        "layer_id": "structural",
+                        "type": "wall",
+                        "name": f"L{f_num} Private Acoustic Focus Pod {pod_i+1}",
+                        "position": [pod_x, y_base + 1.2, -d_bldg / 4 - 1.5],
+                        "dimensions": {"width": 1.4, "height": 2.4, "depth": 1.4},
+                        "material": {"color": "#334155"}
+                    })
+                    elements.append({
+                        "id": uid(f"com_focus_door_{pod_i+1}_L{f_num}"),
+                        "layer_id": "structural",
+                        "type": "window",
+                        "name": f"L{f_num} Focus Pod Acoustic Glass Door",
+                        "position": [pod_x, y_base + 1.1, -d_bldg / 4 - 0.8],
+                        "dimensions": {"width": 0.8, "height": 2.1, "depth": 0.05},
+                        "material": {"color": mats["glass"], "opacity": 0.4}
+                    })
+
+                # 5. Breakout Cafe & Pantry
+                elements.append({
+                    "id": uid(f"com_cafe_island_L{f_num}"),
+                    "layer_id": "structural",
+                    "type": "fixture",
+                    "name": f"L{f_num} Breakout Cafe Waterfall Island Bar & Faucet",
+                    "position": [w_bldg / 4 + 4.5, y_base + 0.5, -d_bldg / 4 - 1.5],
+                    "dimensions": {"width": 3.4, "height": 0.95, "depth": 1.2},
+                    "material": {"color": "#F8FAFC"}
+                })
+                elements.append({
+                    "id": uid(f"com_cafe_faucet_L{f_num}"),
+                    "layer_id": "plumbing",
+                    "type": "pipe",
+                    "name": f"L{f_num} Pantry Matte Black Gooseneck Faucet",
+                    "position": [w_bldg / 4 + 4.5, y_base + 1.15, -d_bldg / 4 - 1.5],
+                    "dimensions": {"width": 0.08, "height": 0.35, "depth": 0.15},
+                    "material": {"color": "#0F172A"}
+                })
+
+                # 6. Centralized Restroom Battery (Connected to Core Wet Stacks)
+                elements.append({
+                    "id": uid(f"com_restroom_wall_L{f_num}"),
+                    "layer_id": "structural",
+                    "type": "wall",
+                    "name": f"L{f_num} Core Restroom Battery Enclosure Wall",
+                    "position": [0, y_base + h_floor / 2, -d_bldg / 4 - 1.0],
+                    "dimensions": {"width": 5.0, "height": h_floor, "depth": 0.15},
+                    "material": {"color": "#1E293B"}
+                })
+                elements.append({
+                    "id": uid(f"com_wc_m_L{f_num}"),
+                    "layer_id": "plumbing",
+                    "type": "fixture",
+                    "name": f"L{f_num} Commercial Wall-Hung Sensor WC (Male)",
+                    "position": [-1.2, y_base + 0.45, -d_bldg / 4 - 2.2],
+                    "dimensions": {"width": 0.4, "height": 0.5, "depth": 0.65},
+                    "material": {"color": "#FFFFFF"}
+                })
+                elements.append({
+                    "id": uid(f"com_wc_f_L{f_num}"),
+                    "layer_id": "plumbing",
+                    "type": "fixture",
+                    "name": f"L{f_num} Commercial Wall-Hung Sensor WC (Female)",
+                    "position": [1.2, y_base + 0.45, -d_bldg / 4 - 2.2],
+                    "dimensions": {"width": 0.4, "height": 0.5, "depth": 0.65},
+                    "material": {"color": "#FFFFFF"}
+                })
+                elements.append({
+                    "id": uid(f"com_vanity_L{f_num}"),
+                    "layer_id": "plumbing",
+                    "type": "fixture",
+                    "name": f"L{f_num} Commercial Double Vanity with Sensor Faucets",
+                    "position": [0, y_base + 0.5, -d_bldg / 4 - 2.2],
+                    "dimensions": {"width": 1.6, "height": 0.85, "depth": 0.55},
+                    "material": {"color": "#0F172A"}
+                })
+
+                # 7. Floor Electrical & Lighting MEP
+                elements.append({
+                    "id": uid(f"com_elec_panel_L{f_num}"),
+                    "layer_id": "electrical",
+                    "type": "fixture",
+                    "name": f"L{f_num} Floor 415V/230V Electrical Distribution Panel",
+                    "position": [-w_bldg / 2 + 0.8, y_base + 1.2, 0],
+                    "dimensions": {"width": 0.2, "height": 1.1, "depth": 0.8},
+                    "material": {"color": "#F59E0B"}
+                })
+                elements.append({
+                    "id": uid(f"com_troffer_L{f_num}"),
+                    "layer_id": "electrical",
+                    "type": "fixture",
+                    "name": f"L{f_num} Architectural Recessed 4000K LED Troffer Grid",
+                    "position": [0, y_base + h_floor - 0.1, 0],
+                    "dimensions": {"width": w_bldg - 2.0, "height": 0.08, "depth": d_bldg - 2.0},
+                    "material": {"color": "#FEF08A", "opacity": 0.85}
+                })
+
         # =========================================================================
         # 8. ROOFTOP MECHANICAL SCREENING & SKY TERRACE
         # =========================================================================
@@ -930,8 +1162,14 @@ class MetaArchitectAgent:
                 "material": {"color": "#0284C7"}
             })
 
-        model_name = f"{floors}-Story High-Rise ({'2BHK + 3BHK' if is_apartment else 'Modern Residence'})"
-        if spec["style"] != "Contemporary Modern":
+        if is_commercial:
+            model_name = f"{floors}-Story Grade-A Commercial Office Tower"
+        elif is_apartment:
+            model_name = f"{floors}-Story High-Rise (2BHK + 3BHK)"
+        else:
+            model_name = f"{floors}-Story Architecture ({spec['style']})"
+            
+        if spec["style"] != "Contemporary Modern" and not is_commercial:
             model_name += f" • {spec['style']}"
 
         building_model = {
@@ -942,6 +1180,7 @@ class MetaArchitectAgent:
             "meta": {
                 "floors": floors,
                 "style": spec["style"],
+                "typology": "commercial" if is_commercial else "residential",
                 "has_city": spec["has_city"],
                 "has_society": spec["has_society"],
                 "available_scales": spec["available_scales"],

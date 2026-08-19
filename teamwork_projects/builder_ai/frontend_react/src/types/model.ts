@@ -32,6 +32,7 @@ export interface BuildingLayer {
 export interface BuildingModelMeta {
   floors?: number;
   style?: string;
+  typology?: string;
   has_city?: boolean;
   has_society?: boolean;
   available_scales?: string[];
