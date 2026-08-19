@@ -27,6 +27,38 @@ export const FloorplanModal: React.FC<FloorplanModalProps> = ({ isOpen, onClose,
 
   const blueprintTemplates = [
     {
+      id: 'commercial_12story',
+      title: '12-Story Commercial High-Rise Core & Office Floorplate',
+      area: '960 m² / floor',
+      levels: '12 Levels',
+      approval: 'Commercial High-Rise Fire & Structural Bureau Approved #CO-902',
+      rooms: [
+        'Central Dual Elevator & Fire Stair Core',
+        '4x 6-Person Open Workstation Pods',
+        '14-Person Executive Boardroom (Acoustic Glass)',
+        '3x Private Acoustic Focus Pods',
+        'Breakout Cafe & Waterfall Pantry Bar',
+        'Core Dual Restroom Battery'
+      ],
+      mep: 'Underfloor Cable Trays + 4000K LED Troffers + Wet Riser Stack',
+      prompt: '12-story Grade-A commercial office tower with central core elevator shaft, open workstations with ergonomic task chairs, 14-person executive boardroom, acoustic phone pods, breakout cafe, restroom battery, and full MEP systems',
+      blueprintSvg: (
+        <svg viewBox="0 0 400 300" className="w-full h-full stroke-[#38BDF8] fill-none">
+          <rect x="25" y="25" width="350" height="250" strokeWidth="2.5" className="stroke-[#38BDF8]" />
+          <rect x="150" y="90" width="100" height="120" strokeWidth="2" className="stroke-[#D4FF32] fill-[#D4FF32]/10" />
+          <text x="162" y="155" fill="#D4FF32" fontSize="10" fontWeight="bold" fontFamily="monospace">CORE / LIFTS</text>
+          <rect x="45" y="45" width="90" height="100" strokeWidth="1.5" strokeDasharray="3 3" className="stroke-[#A78BFA]" />
+          <text x="50" y="95" fill="#A78BFA" fontSize="9" fontWeight="bold" fontFamily="monospace">WORKSTATIONS</text>
+          <rect x="265" y="45" width="95" height="100" strokeWidth="1.5" className="stroke-[#F59E0B]" />
+          <text x="275" y="95" fill="#F59E0B" fontSize="9" fontWeight="bold" fontFamily="monospace">BOARDROOM</text>
+          <rect x="45" y="160" width="90" height="95" strokeWidth="1.5" className="stroke-[#EC4899]" />
+          <text x="50" y="210" fill="#EC4899" fontSize="9" fontWeight="bold" fontFamily="monospace">FOCUS PODS</text>
+          <rect x="265" y="160" width="95" height="95" strokeWidth="1.5" className="stroke-[#10B981]" />
+          <text x="275" y="210" fill="#10B981" fontSize="9" fontWeight="bold" fontFamily="monospace">BREAKOUT CAFE</text>
+        </svg>
+      ),
+    },
+    {
       id: 'villa_2story',
       title: 'Municipal Approved 2-Story Luxury Villa Plan',
       area: '280 m²',
@@ -73,25 +105,6 @@ export const FloorplanModal: React.FC<FloorplanModalProps> = ({ isOpen, onClose,
           <text x="180" y="210" fill="#F59E0B" fontSize="11" fontWeight="bold" fontFamily="monospace">SUITE 2 & BATH</text>
           <rect x="35" y="35" width="10" height="10" fill="#38BDF8" />
           <rect x="355" y="35" width="10" height="10" fill="#38BDF8" />
-        </svg>
-      ),
-    },
-    {
-      id: 'commercial_office',
-      title: '5-Story Commercial Office Floorplate',
-      area: '720 m²',
-      levels: '5 Levels',
-      approval: 'Commercial High-Rise Fire & Structural Approval #CO-402',
-      rooms: ['Ground Lobby', 'Central Elevator Core', 'Open Workstation Floorplate', 'Executive Offices'],
-      mep: 'Underfloor Cable Trays + Wet Riser Core',
-      prompt: '5-story commercial office building with central core elevator shaft, open plan perimeter desks, floor-to-ceiling glass curtain facade, and structural column grid',
-      blueprintSvg: (
-        <svg viewBox="0 0 400 300" className="w-full h-full stroke-[#F59E0B] fill-none">
-          <rect x="40" y="40" width="320" height="220" strokeWidth="2.5" className="stroke-[#F59E0B]" />
-          <rect x="150" y="100" width="100" height="100" strokeWidth="2" className="stroke-[#D4FF32] fill-[#D4FF32]/10" />
-          <text x="160" y="155" fill="#D4FF32" fontSize="10" fontWeight="bold" fontFamily="monospace">CORE / LIFTS</text>
-          <text x="55" y="80" fill="#FFFFFF" fontSize="11" fontWeight="bold" fontFamily="monospace">OPEN WORKSTATIONS</text>
-          <text x="55" y="235" fill="#38BDF8" fontSize="11" fontWeight="bold" fontFamily="monospace">CONFERENCE SUITES</text>
         </svg>
       ),
     },
@@ -275,27 +288,56 @@ export const FloorplanModal: React.FC<FloorplanModalProps> = ({ isOpen, onClose,
 
         {/* TAB 2: VERIFIED TEMPLATES */}
         {activeTab === 'templates' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {blueprintTemplates.map((plan, idx) => (
-              <div
-                key={plan.id}
-                onClick={() => setSelectedPlanIndex(idx)}
-                className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
-                  selectedPlanIndex === idx
-                    ? 'border-[#D4FF32] bg-[#D4FF32]/10 shadow-[0_0_20px_rgba(212,255,50,0.2)]'
-                    : 'border-white/10 bg-black/40 hover:border-white/20'
-                }`}
-              >
-                <div className="h-40 rounded-xl bg-black/60 p-2 overflow-hidden border border-white/5">
-                  {plan.blueprintSvg}
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {blueprintTemplates.map((plan, idx) => (
+                <div
+                  key={plan.id}
+                  onClick={() => setSelectedPlanIndex(idx)}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                    selectedPlanIndex === idx
+                      ? 'border-[#D4FF32] bg-[#D4FF32]/10 shadow-[0_0_20px_rgba(212,255,50,0.2)]'
+                      : 'border-white/10 bg-black/40 hover:border-white/20'
+                  }`}
+                >
+                  <div className="h-40 rounded-xl bg-black/60 p-2 overflow-hidden border border-white/5">
+                    {plan.blueprintSvg}
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-white">{plan.title}</div>
+                    <div className="text-[10px] text-[#D4FF32] font-mono mt-0.5">{plan.approval}</div>
+                    <div className="text-[11px] text-[#8E8F9C] mt-1">{plan.area} • {plan.levels}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-xs font-black text-white">{plan.title}</div>
-                  <div className="text-[10px] text-[#D4FF32] font-mono mt-0.5">{plan.approval}</div>
-                  <div className="text-[11px] text-[#8E8F9C] mt-1">{plan.area} • {plan.levels}</div>
-                </div>
+              ))}
+            </div>
+
+            {/* Selected Plan Detail Inspection Box */}
+            <div className="p-4 rounded-2xl bg-black/40 border border-white/10 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+                  <Layers className="w-3.5 h-3.5 text-[#D4FF32]" />
+                  <span>Programmed Spatial Zones ({blueprintTemplates[selectedPlanIndex].title})</span>
+                </span>
+                <span className="text-[11px] font-mono text-[#D4FF32]">
+                  {blueprintTemplates[selectedPlanIndex].area} • {blueprintTemplates[selectedPlanIndex].levels}
+                </span>
               </div>
-            ))}
+              <div className="flex flex-wrap gap-2">
+                {blueprintTemplates[selectedPlanIndex].rooms.map((room, rIdx) => (
+                  <span
+                    key={rIdx}
+                    className="px-3 py-1 rounded-xl bg-white/5 border border-white/10 text-xs text-white/90 font-medium"
+                  >
+                    ✓ {room}
+                  </span>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 pt-2 border-t border-white/5 text-[11px] text-[#8E8F9C]">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#D4FF32]" />
+                <span>MEP Engineering: <strong className="text-white">{blueprintTemplates[selectedPlanIndex].mep}</strong></span>
+              </div>
+            </div>
           </div>
         )}
 

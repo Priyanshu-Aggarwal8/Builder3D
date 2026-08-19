@@ -7,20 +7,66 @@ from typing import List, Dict, Any, Optional
 def uid(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:6]}"
 
+COLOR_PALETTES: Dict[str, str] = {
+    "white": "#FFFFFF",
+    "pure white": "#FFFFFF",
+    "off white": "#F8FAFC",
+    "ivory": "#FAF7F2",
+    "cream": "#FEF3C7",
+    "black": "#0F172A",
+    "jet black": "#000000",
+    "matte black": "#171717",
+    "charcoal": "#1E293B",
+    "dark grey": "#334155",
+    "dark gray": "#334155",
+    "grey": "#64748B",
+    "gray": "#64748B",
+    "light grey": "#E2E8F0",
+    "light gray": "#E2E8F0",
+    "blue": "#2563EB",
+    "dark blue": "#1E3A8A",
+    "navy": "#0F172A",
+    "cyan": "#06B6D4",
+    "sky blue": "#38BDF8",
+    "teal": "#0D9488",
+    "green": "#16A34A",
+    "emerald": "#059669",
+    "olive": "#65A30D",
+    "sage": "#84A98C",
+    "gold": "#D97706",
+    "bronze": "#B45309",
+    "brass": "#CA8A04",
+    "yellow": "#EAB308",
+    "amber": "#F59E0B",
+    "orange": "#EA580C",
+    "terracotta": "#C2410C",
+    "red": "#DC2626",
+    "burgundy": "#881337",
+    "crimson": "#991B1B",
+    "brown": "#78350F",
+    "walnut": "#451A03",
+    "oak": "#D4A373",
+    "timber": "#B45309",
+    "wood": "#C9935E",
+    "marble": "#F8FAFC",
+    "calacatta": "#F8FAFC",
+    "concrete": "#475569",
+    "terrazzo": "#E2E8F0",
+    "purple": "#9333EA",
+    "violet": "#7C3AED",
+    "pink": "#EC4899",
+    "rose": "#F43F5E",
+}
+
 class MetaArchitectAgent:
     """
     Principal Meta-Agent coordinating specialized sub-agents:
-    1. Typology & Scale Agent: Classifies scale (building only vs storey vs unit).
-    2. Structural & Massing Agent: Generates multi-story facades, mullions, slabs, and elevator cores.
-    3. Hyper-Detailed 2BHK & 3BHK Unit Architecture: Generates complete, fully furnished suites with distinct rooms,
-       curtains, area rugs, kitchen islands with faucets, dining sets with pendant lighting, master beds with headboards,
-       spa bathrooms with soaking tubs, and balconies.
-    4. In-Place Customizer & State Preserver: Mutates existing models incrementally without scrapping user work!
-    5. MEP Systems Agent: Routes vertical utility risers, electrical switchboards, and drainage stacks.
+    1. Typology & Scale Agent: Classifies scale and strict commercial vs residential programs.
+    2. Structural & Massing Agent: Slabs, columns, shear walls, and cores.
+    3. Interior Program Agent: Pure office layouts (workstations, boardrooms, focus booths) OR pure residential suites (2BHK, 3BHK).
+    4. In-Place Natural Color & Material Customizer.
+    5. Connected MEP Systems Agent: Vertical risers, switchboards, drainage wet stacks.
     """
-
-    def __init__(self):
-        pass
 
     def parse_scale_and_typology(self, prompt: str) -> Dict[str, Any]:
         p = prompt.lower()
@@ -55,15 +101,21 @@ class MetaArchitectAgent:
         has_solar = any(k in p for k in ["solar", "photovoltaic", "pv array", "green energy"]) or floors >= 6
         has_balcony = not is_commercial and ("balcony" in p or "balconies" in p or is_apartment)
 
-        style = "Japandi Scandinavian"
+        if is_commercial:
+            style = "Corporate Modern"
+        else:
+            style = "Contemporary Modern"
+
         if any(k in p for k in ["luxury", "italian", "marble", "calacatta", "mansion", "penthouse"]):
             style = "Luxury Calacatta"
         elif any(k in p for k in ["industrial", "loft", "brick", "concrete", "steel"]):
             style = "Industrial Loft"
+        elif any(k in p for k in ["japandi", "scandinavian", "oak", "light timber"]):
+            style = "Japandi Scandinavian"
         elif any(k in p for k in ["biophilic", "sustainable", "green", "timber", "plant"]):
             style = "Biophilic Green"
         elif any(k in p for k in ["contemporary", "modern", "minimalist"]):
-            style = "Contemporary Modern"
+            style = "Corporate Modern" if is_commercial else "Contemporary Modern"
 
         return {
             "floors": floors,
@@ -86,20 +138,20 @@ class MetaArchitectAgent:
         }
 
     def get_style_materials(self, style: str) -> Dict[str, Any]:
-        if style == "Japandi Scandinavian":
+        if style == "Corporate Modern" or style == "Corporate High-Tech":
             return {
-                "wall": "#E5E5E5",
-                "wall_inner": "#FAF7F2",
-                "floor_living": "#D4A373",
-                "floor_kitchen": "#F5F5F4",
-                "floor_bath": "#44403C",
+                "wall": "#F1F5F9",
+                "wall_inner": "#FFFFFF",
+                "floor_living": "#E2E8F0",
+                "floor_kitchen": "#F8FAFC",
+                "floor_bath": "#1E293B",
                 "accent": "#78350F",
-                "furniture": "#D6C7B2",
-                "glass": "#BAE6FD",
-                "mullion": "#171717",
-                "fascia": "#262626",
-                "curtain": "#F8FAFC",
-                "opacity": 0.45
+                "furniture": "#0F172A",
+                "glass": "#38BDF8",
+                "mullion": "#18181B",
+                "fascia": "#0F172A",
+                "curtain": "#E2E8F0",
+                "opacity": 0.35
             }
         elif style == "Luxury Calacatta":
             return {
@@ -131,7 +183,38 @@ class MetaArchitectAgent:
                 "curtain": "#94A3B8",
                 "opacity": 0.5
             }
+        elif style == "Japandi Scandinavian":
+            return {
+                "wall": "#E5E5E5",
+                "wall_inner": "#FAF7F2",
+                "floor_living": "#D4A373",
+                "floor_kitchen": "#F5F5F4",
+                "floor_bath": "#44403C",
+                "accent": "#78350F",
+                "furniture": "#D6C7B2",
+                "glass": "#BAE6FD",
+                "mullion": "#171717",
+                "fascia": "#262626",
+                "curtain": "#F8FAFC",
+                "opacity": 0.45
+            }
+        elif style == "Biophilic Green":
+            return {
+                "wall": "#F1F5F9",
+                "wall_inner": "#FAFDF7",
+                "floor_living": "#D4A373",
+                "floor_kitchen": "#E2E8F0",
+                "floor_bath": "#1E293B",
+                "accent": "#15803D",
+                "furniture": "#334155",
+                "glass": "#6EE7B7",
+                "mullion": "#1E293B",
+                "fascia": "#14532D",
+                "curtain": "#ECFDF5",
+                "opacity": 0.4
+            }
         else:
+            # Contemporary Modern default
             return {
                 "wall": "#E2E8F0",
                 "wall_inner": "#F8FAFC",
@@ -152,7 +235,7 @@ class MetaArchitectAgent:
         p = prompt.lower()
         meta = model.get("meta", {})
         current_floors = meta.get("floors", 12)
-        current_style = meta.get("style", "Contemporary Modern")
+        current_style = meta.get("style", "Corporate Modern" if "commercial" in model.get("name", "").lower() else "Contemporary Modern")
         current_typology = meta.get("typology", "commercial" if "commercial" in model.get("name", "").lower() else "residential")
 
         # 1. Floor Count Changes
@@ -162,68 +245,78 @@ class MetaArchitectAgent:
             combined_prompt = f"{new_floors}-story {current_typology} building with {current_style} style. {prompt}"
             return self.synthesize_model(combined_prompt, model.get("id", 1))
 
-        # 2. Typology Conversions (e.g. "convert to commercial office" or "convert to residential apartments")
+        # 2. Typology Conversions
         if any(k in p for k in ["commercial", "office", "workstation", "boardroom"]) and current_typology != "commercial":
             return self.synthesize_model(f"{current_floors}-story commercial office tower with {current_style} style. {prompt}", model.get("id", 1))
         elif any(k in p for k in ["residential", "apartment", "villa", "2bhk", "3bhk"]) and current_typology == "commercial":
             return self.synthesize_model(f"{current_floors}-story residential building with 2BHK and 3BHK suites. {prompt}", model.get("id", 1))
 
-        # 3. Style & Material Palettes
-        new_style = None
-        if any(k in p for k in ["luxury", "calacatta", "marble", "italian"]):
-            new_style = "Luxury Calacatta"
-        elif any(k in p for k in ["industrial", "loft", "concrete", "steel"]):
-            new_style = "Industrial Loft"
-        elif any(k in p for k in ["japandi", "scandinavian", "oak", "wood", "timber"]):
-            new_style = "Japandi Scandinavian"
-        elif any(k in p for k in ["biophilic", "green", "plants", "nature"]):
-            new_style = "Biophilic Green"
-        elif any(k in p for k in ["dark", "charcoal", "black", "smoked"]):
-            new_style = "Contemporary Modern"
+        # 3. Multi-Clause Natural Color & Material Target Matching
+        all_layers = model.get("layers", {})
+        clauses = re.split(r'[,;]|\band\b|\bwith\b', p)
+        for clause in clauses:
+            clause = clause.strip()
+            if not clause:
+                continue
 
-        if new_style:
-            mats = self.get_style_materials(new_style)
-            meta["style"] = new_style
-            if "layers" in model and "structural" in model["layers"]:
-                for el in model["layers"]["structural"].get("elements", []):
-                    name_lower = el.get("name", "").lower()
-                    if "sofa" in name_lower or "bed" in name_lower or "lounge" in name_lower or "chair" in name_lower:
-                        el.setdefault("material", {})["color"] = mats["furniture"]
-                    elif "floor" in name_lower or "finish" in name_lower or "deck" in name_lower:
-                        el.setdefault("material", {})["color"] = mats["floor_living"]
-                    elif "wall" in name_lower:
-                        el.setdefault("material", {})["color"] = mats["wall"]
-                    elif "mullion" in name_lower:
-                        el.setdefault("material", {})["color"] = mats["mullion"]
-                    elif "glass" in name_lower or "window" in name_lower:
-                        el.setdefault("material", {})["color"] = mats["glass"]
+            clause_color = None
+            for cname in sorted(COLOR_PALETTES.keys(), key=lambda x: -len(x)):
+                if re.search(r'\b' + re.escape(cname) + r'\b', clause):
+                    clause_color = COLOR_PALETTES[cname]
+                    break
 
-        # 4. Facade, Mullion & Glazing Customizations
-        if any(k in p for k in ["dark glass", "tinted glass", "smoked glass", "black glass"]):
-            for el in model.get("layers", {}).get("structural", {}).get("elements", []):
-                if el.get("type") in ["window"] or "glass" in el.get("name", "").lower():
-                    el.setdefault("material", {})["color"] = "#0F172A"
-                    el["material"]["opacity"] = 0.6
-        elif any(k in p for k in ["blue glass", "cyan glass", "low-e", "reflective"]):
-            for el in model.get("layers", {}).get("structural", {}).get("elements", []):
-                if el.get("type") in ["window"] or "glass" in el.get("name", "").lower():
-                    el.setdefault("material", {})["color"] = "#38BDF8"
-                    el["material"]["opacity"] = 0.35
+            hex_m = re.search(r'#(?:[0-9a-fA-F]{3}){1,2}\b', clause)
+            if hex_m:
+                clause_color = hex_m.group(0)
 
-        if any(k in p for k in ["bronze mullion", "gold mullion", "brass mullion", "bronze trim"]):
-            for el in model.get("layers", {}).get("structural", {}).get("elements", []):
-                if "mullion" in el.get("name", "").lower() or "fascia" in el.get("name", "").lower():
-                    el.setdefault("material", {})["color"] = "#B45309"
-        elif any(k in p for k in ["black mullion", "dark mullion", "charcoal mullion"]):
-            for el in model.get("layers", {}).get("structural", {}).get("elements", []):
-                if "mullion" in el.get("name", "").lower():
-                    el.setdefault("material", {})["color"] = "#171717"
+            if not clause_color:
+                continue
 
-        # 5. Amenity Additions (Pool, Solar, Chiller, Planters, Pergola)
+            target_walls = any(k in clause for k in ["wall", "partition", "shear", "plaster"])
+            target_floors = any(k in clause for k in ["floor", "flooring", "slab", "carpet", "deck"])
+            target_glass = any(k in clause for k in ["glass", "facade", "window", "glazing", "curtain", "balustrade"])
+            target_mullions = any(k in clause for k in ["mullion", "trim", "fascia", "frame"])
+            target_chairs = any(k in clause for k in ["chair", "seat", "swivel", "mesh", "stool"])
+            target_desks = any(k in clause for k in ["desk", "workstation", "table", "boardroom"])
+            target_sofas = any(k in clause for k in ["sofa", "couch", "lounge", "bench"])
+            target_furniture = any(k in clause for k in ["furniture", "bed"]) or (target_chairs or target_desks or target_sofas)
+            target_fixtures = any(k in clause for k in ["fixture", "counter", "island", "vanity", "tub", "sink", "wc", "toilet"])
+
+            if not any([target_walls, target_floors, target_glass, target_mullions, target_chairs, target_desks, target_sofas, target_fixtures]):
+                target_walls = True
+                target_furniture = True
+
+            for l_id, layer in all_layers.items():
+                for el in layer.get("elements", []):
+                    name_l = el.get("name", "").lower()
+                    type_l = el.get("type", "").lower()
+
+                    if target_walls and (type_l == "wall" or "wall" in name_l):
+                        el.setdefault("material", {})["color"] = clause_color
+                    elif target_floors and (type_l == "slab" or "floor" in name_l or "deck" in name_l):
+                        el.setdefault("material", {})["color"] = clause_color
+                    elif target_glass and (type_l == "window" or "glass" in name_l or "curtain" in name_l):
+                        el.setdefault("material", {})["color"] = clause_color
+                        if "dark" in clause or "tint" in clause or "black" in clause:
+                            el["material"]["opacity"] = 0.65
+                    elif target_mullions and ("mullion" in name_l or "fascia" in name_l or "frame" in name_l):
+                        el.setdefault("material", {})["color"] = clause_color
+                    elif target_chairs and ("chair" in name_l or "seat" in name_l or "swivel" in name_l or "stool" in name_l):
+                        el.setdefault("material", {})["color"] = clause_color
+                    elif target_desks and ("desk" in name_l or "workstation" in name_l or "table" in name_l):
+                        el.setdefault("material", {})["color"] = clause_color
+                    elif target_sofas and ("sofa" in name_l or "couch" in name_l or "lounge" in name_l):
+                        el.setdefault("material", {})["color"] = clause_color
+                    elif target_furniture and (l_id == "furniture" or any(f in name_l for f in ["sofa", "chair", "desk", "table", "bed", "bench", "pod"])):
+                        el.setdefault("material", {})["color"] = clause_color
+                    elif target_fixtures and (l_id == "fixtures" or any(f in name_l for f in ["counter", "island", "vanity", "sink", "tub", "wc"])):
+                        el.setdefault("material", {})["color"] = clause_color
+
+        # 4. Amenities Additions
         h_floor = 3.8 if current_typology == "commercial" else 3.2
         total_h = current_floors * h_floor
 
-        if "pool" in p and not any("pool" in el.get("name", "").lower() for el in model.get("layers", {}).get("structural", {}).get("elements", [])):
+        if "pool" in p and not any("pool" in el.get("name", "").lower() for l in all_layers.values() for el in l.get("elements", [])):
             pool_el = {
                 "id": uid("infinity_pool"),
                 "layer_id": "structural",
@@ -233,9 +326,9 @@ class MetaArchitectAgent:
                 "dimensions": {"width": 7.0, "height": 0.5, "depth": 10.0},
                 "material": {"color": "#06B6D4", "opacity": 0.85, "transmission": 0.8}
             }
-            model.setdefault("layers", {}).setdefault("structural", {}).setdefault("elements", []).append(pool_el)
+            all_layers.setdefault("structural", {"id": "structural", "name": "Structural Framework", "visible": True, "color": "#D4FF32", "elements": []})["elements"].append(pool_el)
 
-        if any(k in p for k in ["solar", "photovoltaic", "pv array"]) and not any("solar" in el.get("name", "").lower() for el in model.get("layers", {}).get("electrical", {}).get("elements", [])):
+        if any(k in p for k in ["solar", "photovoltaic", "pv array"]) and not any("solar" in el.get("name", "").lower() for l in all_layers.values() for el in l.get("elements", [])):
             solar_el = {
                 "id": uid("solar_pv"),
                 "layer_id": "electrical",
@@ -245,9 +338,9 @@ class MetaArchitectAgent:
                 "dimensions": {"width": 14.0, "height": 0.15, "depth": 7.0},
                 "material": {"color": "#0284C7"}
             }
-            model.setdefault("layers", {}).setdefault("electrical", {}).setdefault("elements", []).append(solar_el)
+            all_layers.setdefault("electrical", {"id": "electrical", "name": "Electrical & HVAC", "visible": True, "color": "#F59E0B", "elements": []})["elements"].append(solar_el)
 
-        if any(k in p for k in ["chiller", "hvac", "cooling tower"]) and not any("chiller" in el.get("name", "").lower() for el in model.get("layers", {}).get("electrical", {}).get("elements", [])):
+        if any(k in p for k in ["chiller", "hvac", "cooling tower"]) and not any("chiller" in el.get("name", "").lower() for l in all_layers.values() for el in l.get("elements", [])):
             chiller_el = {
                 "id": uid("hvac_chiller"),
                 "layer_id": "electrical",
@@ -257,22 +350,9 @@ class MetaArchitectAgent:
                 "dimensions": {"width": 4.5, "height": 2.2, "depth": 3.5},
                 "material": {"color": "#475569"}
             }
-            model.setdefault("layers", {}).setdefault("electrical", {}).setdefault("elements", []).append(chiller_el)
+            all_layers.setdefault("electrical", {"id": "electrical", "name": "Electrical & HVAC", "visible": True, "color": "#F59E0B", "elements": []})["elements"].append(chiller_el)
 
-        if any(k in p for k in ["planter", "greenery", "plants", "biophilic"]) and not any("planter" in el.get("name", "").lower() for el in model.get("layers", {}).get("structural", {}).get("elements", [])):
-            for f in range(min(5, current_floors)):
-                planter_el = {
-                    "id": uid(f"planter_L{f+1}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"Level {f+1} Cantilevered Biophilic Planter Box",
-                    "position": [0, f * h_floor + 0.6, 9.5],
-                    "dimensions": {"width": 8.0, "height": 0.6, "depth": 0.6},
-                    "material": {"color": "#15803D", "roughness": 0.95}
-                }
-                model.setdefault("layers", {}).setdefault("structural", {}).setdefault("elements", []).append(planter_el)
-
-        # 6. Synchronize version, generated_elements, and metadata
+        # 5. Synchronize version, generated_elements, and metadata
         model["version"] = int(uuid.uuid4().int % 1000000)
         model["generated_elements"] = [el for layer in model.get("layers", {}).values() for el in layer.get("elements", [])]
         return model
@@ -319,7 +399,7 @@ class MetaArchitectAgent:
             y_base = f * h_floor
             f_num = f + 1
 
-            # 1. Structural Post-Tensioned Concrete Floor Slab with Fascia Band
+            # 1. Structural Post-Tensioned Concrete Floor Slab
             elements.append({
                 "id": uid(f"slab_L{f_num}"),
                 "layer_id": "structural",
@@ -330,7 +410,7 @@ class MetaArchitectAgent:
                 "material": {"color": mats["fascia"], "roughness": 0.7}
             })
 
-            # 2. Hardwood / Porcelain Finished Flooring
+            # 2. Finished Flooring
             elements.append({
                 "id": uid(f"floor_finish_L{f_num}"),
                 "layer_id": "structural",
@@ -342,8 +422,10 @@ class MetaArchitectAgent:
             })
 
             # 3. Structural RC Columns
-            for cx in [-w_bldg / 2 + 0.5, -w_bldg / 4, w_bldg / 4, w_bldg / 2 - 0.5]:
-                for cz in [-d_bldg / 2 + 0.5, 0, d_bldg / 2 - 0.5]:
+            col_x_list = [-w_bldg / 2 + 0.5, -w_bldg / 4, w_bldg / 4, w_bldg / 2 - 0.5]
+            col_z_list = [-d_bldg / 2 + 0.5, 0, d_bldg / 2 - 0.5]
+            for cx in col_x_list:
+                for cz in col_z_list:
                     elements.append({
                         "id": uid(f"col_L{f_num}"),
                         "layer_id": "structural",
@@ -354,7 +436,7 @@ class MetaArchitectAgent:
                         "material": {"color": "#171717"}
                     })
 
-            # 4. Central Core: Dual Elevator Shaft & Pressurized Fire Exit Stair Core
+            # 4. Central Core: Dual Elevator Shaft & Fire Exit Stair Core
             elements.append({
                 "id": uid(f"lift_shaft_L{f_num}"),
                 "layer_id": "structural",
@@ -374,10 +456,10 @@ class MetaArchitectAgent:
                 "material": {"color": "#1E293B"}
             })
 
-            # 5. Exterior Curtain Glazing & Mullion Ribs
+            # 5. Exterior Curtain Glazing & Mullions
             elements.append({
                 "id": uid(f"curtain_s_L{f_num}"),
-                "layer_id": "structural",
+                "layer_id": "architecture",
                 "type": "window",
                 "name": f"Level {f_num} South Curtain Glass Facade",
                 "position": [0, y_base + h_floor / 2, d_bldg / 2],
@@ -386,7 +468,7 @@ class MetaArchitectAgent:
             })
             elements.append({
                 "id": uid(f"curtain_n_L{f_num}"),
-                "layer_id": "structural",
+                "layer_id": "architecture",
                 "type": "window",
                 "name": f"Level {f_num} North Curtain Glass Facade",
                 "position": [0, y_base + h_floor / 2, -d_bldg / 2],
@@ -395,7 +477,7 @@ class MetaArchitectAgent:
             })
             elements.append({
                 "id": uid(f"facade_w_L{f_num}"),
-                "layer_id": "structural",
+                "layer_id": "architecture",
                 "type": "wall",
                 "name": f"Level {f_num} West Architectural Shear Wall",
                 "position": [-w_bldg / 2, y_base + h_floor / 2, 0],
@@ -404,7 +486,7 @@ class MetaArchitectAgent:
             })
             elements.append({
                 "id": uid(f"facade_e_L{f_num}"),
-                "layer_id": "structural",
+                "layer_id": "architecture",
                 "type": "wall",
                 "name": f"Level {f_num} East Architectural Shear Wall",
                 "position": [w_bldg / 2, y_base + h_floor / 2, 0],
@@ -416,7 +498,7 @@ class MetaArchitectAgent:
             for mx in [-w_bldg / 2 + 3.0, -w_bldg / 6, w_bldg / 6, w_bldg / 2 - 3.0]:
                 elements.append({
                     "id": uid(f"mullion_s_L{f_num}"),
-                    "layer_id": "structural",
+                    "layer_id": "architecture",
                     "type": "column",
                     "name": f"Level {f_num} South Aluminum Mullion Rib",
                     "position": [mx, y_base + h_floor / 2, d_bldg / 2 + 0.06],
@@ -425,7 +507,7 @@ class MetaArchitectAgent:
                 })
                 elements.append({
                     "id": uid(f"mullion_n_L{f_num}"),
-                    "layer_id": "structural",
+                    "layer_id": "architecture",
                     "type": "column",
                     "name": f"Level {f_num} North Aluminum Mullion Rib",
                     "position": [mx, y_base + h_floor / 2, -d_bldg / 2 - 0.06],
@@ -433,8 +515,8 @@ class MetaArchitectAgent:
                     "material": {"color": mats["mullion"]}
                 })
 
-            # 6. Sculptural Cantilevered Balconies
-            if spec["has_balcony"]:
+            # 6. Balconies (Residential Only)
+            if spec["has_balcony"] and not is_commercial:
                 elements.append({
                     "id": uid(f"balc_slab_w_L{f_num}"),
                     "layer_id": "structural",
@@ -446,7 +528,7 @@ class MetaArchitectAgent:
                 })
                 elements.append({
                     "id": uid(f"balc_glass_w_L{f_num}"),
-                    "layer_id": "structural",
+                    "layer_id": "architecture",
                     "type": "window",
                     "name": f"Level {f_num} Sunset Balcony Tempered Glass Balustrade",
                     "position": [-w_bldg / 4 - 1.0, y_base + 0.75, d_bldg / 2 + 2.35],
@@ -454,469 +536,14 @@ class MetaArchitectAgent:
                     "material": {"color": mats["glass"], "opacity": 0.45}
                 })
 
-                elements.append({
-                    "id": uid(f"balc_slab_e_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "slab",
-                    "name": f"Level {f_num} Sunrise Balcony Teak Deck",
-                    "position": [w_bldg / 4 + 1.0, y_base + 0.15, d_bldg / 2 + 1.2],
-                    "dimensions": {"width": w_bldg / 2 - 2.0, "height": 0.25, "depth": 2.4},
-                    "material": {"color": mats["fascia"]}
-                })
-                elements.append({
-                    "id": uid(f"balc_glass_e_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "window",
-                    "name": f"Level {f_num} Sunrise Balcony Tempered Glass Balustrade",
-                    "position": [w_bldg / 4 + 1.0, y_base + 0.75, d_bldg / 2 + 2.35],
-                    "dimensions": {"width": w_bldg / 2 - 2.0, "height": 1.1, "depth": 0.05},
-                    "material": {"color": mats["glass"], "opacity": 0.45}
-                })
-
             # =========================================================================
-            # 7. HIGH-FIDELITY COMPOSITE HOUSE INTERIORS (2BHK & 3BHK SUITES)
-            # =========================================================================
-            if is_apartment and spec["has_2bhk"]:
-                x_u1 = -w_bldg / 4 - 1.0
-
-                # Corridor Entrance Wall with 0.9m Doorway Opening
-                elements.append({
-                    "id": uid(f"u1_wall_corridor_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "wall",
-                    "name": f"L{f_num} Unit 1 Corridor Wall",
-                    "position": [x_u1 + 4.5, y_base + h_floor / 2, -2.0],
-                    "dimensions": {"width": 0.15, "height": h_floor, "depth": d_bldg / 2 - 1.0},
-                    "material": {"color": mats["wall_inner"]}
-                })
-                elements.append({
-                    "id": uid(f"u1_door_entry_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 1 Solid Timber Entrance Door",
-                    "position": [x_u1 + 4.5, y_base + 1.1, 0.5],
-                    "dimensions": {"width": 0.1, "height": 2.2, "depth": 0.9},
-                    "material": {"color": mats["accent"]}
-                })
-
-                # Architectural Sheer Curtains along South Window
-                elements.append({
-                    "id": uid(f"u1_curtain_s_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "window",
-                    "name": f"L{f_num} Unit 1 Flowing Pleated Sheer Curtains",
-                    "position": [x_u1 - 1.0, y_base + h_floor / 2, d_bldg / 2 - 0.25],
-                    "dimensions": {"width": 6.5, "height": h_floor - 0.2, "depth": 0.08},
-                    "material": {"color": mats["curtain"], "opacity": 0.65, "transparent": True}
-                })
-
-                # Master Suite Acoustic Partition Wall
-                elements.append({
-                    "id": uid(f"u1_wall_master_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "wall",
-                    "name": f"L{f_num} Unit 1 Master Suite Wall",
-                    "position": [x_u1 - 1.0, y_base + h_floor / 2, 1.5],
-                    "dimensions": {"width": 6.8, "height": h_floor, "depth": 0.15},
-                    "material": {"color": mats["wall_inner"]}
-                })
-                # Bedroom 2 Partition Wall
-                elements.append({
-                    "id": uid(f"u1_wall_bed2_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "wall",
-                    "name": f"L{f_num} Unit 1 Bedroom 2 Wall",
-                    "position": [x_u1 + 1.8, y_base + h_floor / 2, 3.8],
-                    "dimensions": {"width": 0.15, "height": h_floor, "depth": 4.5},
-                    "material": {"color": mats["wall_inner"]}
-                })
-                # Bathroom Enclosure Wall
-                elements.append({
-                    "id": uid(f"u1_wall_bath_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "wall",
-                    "name": f"L{f_num} Unit 1 En-Suite Bath Enclosure Wall",
-                    "position": [-w_bldg / 2 + 3.2, y_base + h_floor / 2, 2.5],
-                    "dimensions": {"width": 0.15, "height": h_floor, "depth": 3.0},
-                    "material": {"color": mats["wall_inner"]}
-                })
-
-                # LIVING ROOM & MEDIA ZONE
-                elements.append({
-                    "id": uid(f"u1_sofa_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 1 L-Sectional Bouclé Sofa & Pillows",
-                    "position": [x_u1 - 1.2, y_base + 0.45, -2.5],
-                    "dimensions": {"width": 3.4, "height": 0.75, "depth": 2.2},
-                    "material": {"color": mats["furniture"]}
-                })
-                elements.append({
-                    "id": uid(f"u1_rug_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "slab",
-                    "name": f"L{f_num} Unit 1 Woven Living Room Area Rug",
-                    "position": [x_u1 - 1.2, y_base + 0.32, -2.5],
-                    "dimensions": {"width": 3.8, "height": 0.02, "depth": 3.0},
-                    "material": {"color": mats["furniture"]}
-                })
-                elements.append({
-                    "id": uid(f"u1_coffee_table_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 1 Fluted Oak Coffee Table",
-                    "position": [x_u1 - 1.2, y_base + 0.22, -2.5],
-                    "dimensions": {"width": 1.6, "height": 0.35, "depth": 0.85},
-                    "material": {"color": mats["floor_living"]}
-                })
-                elements.append({
-                    "id": uid(f"u1_tv_console_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 1 Low-Profile TV Media Console & 75\" OLED",
-                    "position": [x_u1 - 1.2, y_base + 0.45, -0.4],
-                    "dimensions": {"width": 2.6, "height": 0.85, "depth": 0.45},
-                    "material": {"color": "#171717"}
-                })
-
-                # DINING SUITE
-                elements.append({
-                    "id": uid(f"u1_dining_set_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 1 Solid Walnut Dining Table & 6 Chairs",
-                    "position": [x_u1 + 2.2, y_base + 0.45, -1.8],
-                    "dimensions": {"width": 2.6, "height": 0.75, "depth": 1.1},
-                    "material": {"color": mats["accent"]}
-                })
-
-                # KITCHEN
-                elements.append({
-                    "id": uid(f"u1_kitchen_island_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 1 Waterfall Island with Faucet & Barstools",
-                    "position": [x_u1 + 2.2, y_base + 0.5, -4.5],
-                    "dimensions": {"width": 2.8, "height": 0.95, "depth": 1.1},
-                    "material": {"color": "#FFFFFF"}
-                })
-                elements.append({
-                    "id": uid(f"u1_kitchen_base_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 1 Induction Hob & Base Cabinets",
-                    "position": [x_u1 + 2.2, y_base + 0.5, -7.5],
-                    "dimensions": {"width": 3.8, "height": 0.92, "depth": 0.65},
-                    "material": {"color": "#1E293B"}
-                })
-
-                # MASTER SUITE
-                elements.append({
-                    "id": uid(f"u1_master_bed_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 1 King Platform Bed & Pillows",
-                    "position": [x_u1 - 1.2, y_base + 0.45, 4.5],
-                    "dimensions": {"width": 2.2, "height": 0.55, "depth": 2.4},
-                    "material": {"color": mats["furniture"]}
-                })
-                elements.append({
-                    "id": uid(f"u1_master_headboard_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "wall",
-                    "name": f"L{f_num} Unit 1 Fluted Timber Acoustic Headboard",
-                    "position": [x_u1 - 1.2, y_base + 1.2, 5.8],
-                    "dimensions": {"width": 3.2, "height": 1.5, "depth": 0.12},
-                    "material": {"color": mats["accent"]}
-                })
-                elements.append({
-                    "id": uid(f"u1_master_nightstand_l_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 1 Bedside Floating Nightstand & Lamp",
-                    "position": [x_u1 - 2.8, y_base + 0.4, 5.2],
-                    "dimensions": {"width": 0.6, "height": 0.5, "depth": 0.5},
-                    "material": {"color": mats["accent"]}
-                })
-                elements.append({
-                    "id": uid(f"u1_master_nightstand_r_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 1 Bedside Floating Nightstand & Lamp Right",
-                    "position": [x_u1 + 0.4, y_base + 0.4, 5.2],
-                    "dimensions": {"width": 0.6, "height": 0.5, "depth": 0.5},
-                    "material": {"color": mats["accent"]}
-                })
-
-                # BEDROOM 2
-                elements.append({
-                    "id": uid(f"u1_bed2_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 1 Bedroom 2 Queen Bed",
-                    "position": [x_u1 + 3.2, y_base + 0.45, 4.5],
-                    "dimensions": {"width": 1.8, "height": 0.55, "depth": 2.0},
-                    "material": {"color": mats["furniture"]}
-                })
-
-                # BATHROOM
-                elements.append({
-                    "id": uid(f"u1_bath_vanity_L{f_num}"),
-                    "layer_id": "plumbing",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 1 Floating Double Vanity & Backlit Mirror",
-                    "position": [-w_bldg / 2 + 1.8, y_base + 0.5, 2.5],
-                    "dimensions": {"width": 1.6, "height": 0.85, "depth": 0.6},
-                    "material": {"color": "#1E293B"}
-                })
-                elements.append({
-                    "id": uid(f"u1_bath_tub_L{f_num}"),
-                    "layer_id": "plumbing",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 1 Freestanding Soaking Tub & Floor Mixer",
-                    "position": [-w_bldg / 2 + 1.8, y_base + 0.35, -0.8],
-                    "dimensions": {"width": 1.7, "height": 0.65, "depth": 0.85},
-                    "material": {"color": "#FAFAFA"}
-                })
-                elements.append({
-                    "id": uid(f"u1_bath_shower_L{f_num}"),
-                    "layer_id": "plumbing",
-                    "type": "window",
-                    "name": f"L{f_num} Unit 1 Frameless Glass Walk-In Shower",
-                    "position": [-w_bldg / 2 + 1.8, y_base + 1.1, 1.2],
-                    "dimensions": {"width": 1.2, "height": 2.2, "depth": 0.05},
-                    "material": {"color": mats["glass"], "opacity": 0.4}
-                })
-
-            if is_apartment and spec["has_3bhk"]:
-                x_u2 = w_bldg / 4 + 1.0
-
-                # Corridor Entrance Wall with 0.9m Doorway Opening
-                elements.append({
-                    "id": uid(f"u2_wall_corridor_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "wall",
-                    "name": f"L{f_num} Unit 2 Corridor Wall",
-                    "position": [x_u2 - 4.5, y_base + h_floor / 2, -2.0],
-                    "dimensions": {"width": 0.15, "height": h_floor, "depth": d_bldg / 2 - 1.0},
-                    "material": {"color": mats["wall_inner"]}
-                })
-                elements.append({
-                    "id": uid(f"u2_door_entry_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 2 Solid Timber Entrance Door",
-                    "position": [x_u2 - 4.5, y_base + 1.1, 0.5],
-                    "dimensions": {"width": 0.1, "height": 2.2, "depth": 0.9},
-                    "material": {"color": mats["accent"]}
-                })
-
-                # Architectural Sheer Curtains along South Window
-                elements.append({
-                    "id": uid(f"u2_curtain_s_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "window",
-                    "name": f"L{f_num} Unit 2 Flowing Pleated Sheer Curtains",
-                    "position": [x_u2 + 1.0, y_base + h_floor / 2, d_bldg / 2 - 0.25],
-                    "dimensions": {"width": 6.5, "height": h_floor - 0.2, "depth": 0.08},
-                    "material": {"color": mats["curtain"], "opacity": 0.65, "transparent": True}
-                })
-
-                # Bedroom Wing Partition Wall
-                elements.append({
-                    "id": uid(f"u2_wall_beds_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "wall",
-                    "name": f"L{f_num} Unit 2 Bedroom Wing Wall",
-                    "position": [x_u2, y_base + h_floor / 2, 1.2],
-                    "dimensions": {"width": 6.8, "height": h_floor, "depth": 0.15},
-                    "material": {"color": mats["wall_inner"]}
-                })
-                # Bedroom 2 & 3 Dividing Wall
-                elements.append({
-                    "id": uid(f"u2_wall_bed23_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "wall",
-                    "name": f"L{f_num} Unit 2 Bedroom 2/3 Dividing Wall",
-                    "position": [x_u2 - 1.8, y_base + h_floor / 2, 3.8],
-                    "dimensions": {"width": 0.15, "height": h_floor, "depth": 4.5},
-                    "material": {"color": mats["wall_inner"]}
-                })
-                # Bathroom Enclosure Wall
-                elements.append({
-                    "id": uid(f"u2_wall_bath_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "wall",
-                    "name": f"L{f_num} Unit 2 En-Suite Bath Enclosure Wall",
-                    "position": [w_bldg / 2 - 3.2, y_base + h_floor / 2, 2.5],
-                    "dimensions": {"width": 0.15, "height": h_floor, "depth": 3.0},
-                    "material": {"color": mats["wall_inner"]}
-                })
-
-                # LIVING ROOM
-                elements.append({
-                    "id": uid(f"u2_sofa_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 2 L-Sectional Bouclé Sofa & Pillows",
-                    "position": [x_u2 + 1.2, y_base + 0.45, -2.5],
-                    "dimensions": {"width": 3.4, "height": 0.75, "depth": 2.2},
-                    "material": {"color": mats["furniture"]}
-                })
-                elements.append({
-                    "id": uid(f"u2_rug_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "slab",
-                    "name": f"L{f_num} Unit 2 Woven Living Room Area Rug",
-                    "position": [x_u2 + 1.2, y_base + 0.32, -2.5],
-                    "dimensions": {"width": 3.8, "height": 0.02, "depth": 3.0},
-                    "material": {"color": mats["furniture"]}
-                })
-                elements.append({
-                    "id": uid(f"u2_coffee_table_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 2 Fluted Oak Coffee Table",
-                    "position": [x_u2 + 1.2, y_base + 0.22, -2.5],
-                    "dimensions": {"width": 1.6, "height": 0.35, "depth": 0.85},
-                    "material": {"color": mats["floor_living"]}
-                })
-                elements.append({
-                    "id": uid(f"u2_tv_console_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 2 Low-Profile TV Media Console & 75\" OLED",
-                    "position": [x_u2 + 1.2, y_base + 0.45, -0.4],
-                    "dimensions": {"width": 2.6, "height": 0.85, "depth": 0.45},
-                    "material": {"color": "#171717"}
-                })
-
-                # DINING SUITE
-                elements.append({
-                    "id": uid(f"u2_dining_set_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 2 Solid Walnut Dining Table & 6 Chairs",
-                    "position": [x_u2 - 2.2, y_base + 0.45, -1.8],
-                    "dimensions": {"width": 2.6, "height": 0.75, "depth": 1.1},
-                    "material": {"color": mats["accent"]}
-                })
-
-                # KITCHEN
-                elements.append({
-                    "id": uid(f"u2_kitchen_island_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 2 Waterfall Island with Faucet & Barstools",
-                    "position": [x_u2 - 2.2, y_base + 0.5, -4.5],
-                    "dimensions": {"width": 2.8, "height": 0.95, "depth": 1.1},
-                    "material": {"color": "#FFFFFF"}
-                })
-                elements.append({
-                    "id": uid(f"u2_kitchen_base_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 2 Induction Hob & Base Cabinets",
-                    "position": [x_u2 - 2.2, y_base + 0.5, -7.5],
-                    "dimensions": {"width": 3.8, "height": 0.92, "depth": 0.65},
-                    "material": {"color": "#1E293B"}
-                })
-
-                # MASTER SUITE
-                elements.append({
-                    "id": uid(f"u2_master_bed_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 2 King Platform Bed & Pillows",
-                    "position": [x_u2 + 1.2, y_base + 0.45, 4.5],
-                    "dimensions": {"width": 2.2, "height": 0.55, "depth": 2.4},
-                    "material": {"color": mats["furniture"]}
-                })
-                elements.append({
-                    "id": uid(f"u2_master_headboard_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "wall",
-                    "name": f"L{f_num} Unit 2 Fluted Timber Acoustic Headboard",
-                    "position": [x_u2 + 1.2, y_base + 1.2, 5.8],
-                    "dimensions": {"width": 3.2, "height": 1.5, "depth": 0.12},
-                    "material": {"color": mats["accent"]}
-                })
-                elements.append({
-                    "id": uid(f"u2_master_nightstand_l_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 2 Bedside Floating Nightstand & Lamp",
-                    "position": [x_u2 - 0.4, y_base + 0.4, 5.2],
-                    "dimensions": {"width": 0.6, "height": 0.5, "depth": 0.5},
-                    "material": {"color": mats["accent"]}
-                })
-                elements.append({
-                    "id": uid(f"u2_master_nightstand_r_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 2 Bedside Floating Nightstand & Lamp Right",
-                    "position": [x_u2 + 2.8, y_base + 0.4, 5.2],
-                    "dimensions": {"width": 0.6, "height": 0.5, "depth": 0.5},
-                    "material": {"color": mats["accent"]}
-                })
-
-                # BEDROOM 2 & 3
-                elements.append({
-                    "id": uid(f"u2_bed2_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 2 Bedroom 2 Queen Bed",
-                    "position": [x_u2 - 3.2, y_base + 0.45, 3.5],
-                    "dimensions": {"width": 1.8, "height": 0.55, "depth": 2.0},
-                    "material": {"color": mats["furniture"]}
-                })
-                elements.append({
-                    "id": uid(f"u2_bed3_L{f_num}"),
-                    "layer_id": "structural",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 2 Bedroom 3 Twin Bed",
-                    "position": [x_u2 - 3.2, y_base + 0.45, 6.5],
-                    "dimensions": {"width": 1.2, "height": 0.55, "depth": 2.0},
-                    "material": {"color": mats["furniture"]}
-                })
-
-                # BATHROOM
-                elements.append({
-                    "id": uid(f"u2_bath_vanity_L{f_num}"),
-                    "layer_id": "plumbing",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 2 Floating Double Vanity & Backlit Mirror",
-                    "position": [w_bldg / 2 - 1.8, y_base + 0.5, 2.5],
-                    "dimensions": {"width": 1.6, "height": 0.85, "depth": 0.6},
-                    "material": {"color": "#1E293B"}
-                })
-                elements.append({
-                    "id": uid(f"u2_bath_tub_L{f_num}"),
-                    "layer_id": "plumbing",
-                    "type": "fixture",
-                    "name": f"L{f_num} Unit 2 Freestanding Soaking Tub & Floor Mixer",
-                    "position": [w_bldg / 2 - 1.8, y_base + 0.35, -0.8],
-                    "dimensions": {"width": 1.7, "height": 0.65, "depth": 0.85},
-                    "material": {"color": "#FAFAFA"}
-                })
-                elements.append({
-                    "id": uid(f"u2_bath_shower_L{f_num}"),
-                    "layer_id": "plumbing",
-                    "type": "window",
-                    "name": f"L{f_num} Unit 2 Frameless Glass Walk-In Shower",
-                    "position": [w_bldg / 2 - 1.8, y_base + 1.1, 1.2],
-                    "dimensions": {"width": 1.2, "height": 2.2, "depth": 0.05},
-                    "material": {"color": mats["glass"], "opacity": 0.4}
-                })
-
-            # =========================================================================
-            # 7B. GRADE-A COMMERCIAL OFFICE FLOORPLATE (WORKSTATIONS, BOARDROOM, PANTRY, RESTROOMS)
+            # CASE A: COMMERCIAL OFFICE FLOORPLATE (PURE OFFICE - ZERO RESIDENTIAL BEDS)
             # =========================================================================
             if is_commercial:
                 # 1. Reception & Visitor Waiting Lounge (West Front)
                 elements.append({
                     "id": uid(f"com_rec_wall_L{f_num}"),
-                    "layer_id": "structural",
+                    "layer_id": "architecture",
                     "type": "wall",
                     "name": f"L{f_num} Reception Acoustic Timber Feature Wall",
                     "position": [-w_bldg / 4 - 2.0, y_base + h_floor / 2, -d_bldg / 4],
@@ -925,7 +552,7 @@ class MetaArchitectAgent:
                 })
                 elements.append({
                     "id": uid(f"com_rec_desk_L{f_num}"),
-                    "layer_id": "structural",
+                    "layer_id": "furniture",
                     "type": "fixture",
                     "name": f"L{f_num} Executive Reception Desk & Granite Top",
                     "position": [-w_bldg / 4 - 2.0, y_base + 0.55, -d_bldg / 4 + 1.2],
@@ -934,7 +561,7 @@ class MetaArchitectAgent:
                 })
                 elements.append({
                     "id": uid(f"com_lounge_sofa_L{f_num}"),
-                    "layer_id": "structural",
+                    "layer_id": "furniture",
                     "type": "fixture",
                     "name": f"L{f_num} Visitor Lounge 3-Seater Sofa",
                     "position": [-w_bldg / 4 - 2.0, y_base + 0.45, -d_bldg / 4 + 3.6],
@@ -943,7 +570,7 @@ class MetaArchitectAgent:
                 })
                 elements.append({
                     "id": uid(f"com_lounge_table_L{f_num}"),
-                    "layer_id": "structural",
+                    "layer_id": "furniture",
                     "type": "fixture",
                     "name": f"L{f_num} Calacatta Marble Reception Coffee Table",
                     "position": [-w_bldg / 4 - 2.0, y_base + 0.22, -d_bldg / 4 + 2.5],
@@ -960,21 +587,20 @@ class MetaArchitectAgent:
                 ]):
                     elements.append({
                         "id": uid(f"com_desk_pod_{pod_idx+1}_L{f_num}"),
-                        "layer_id": "structural",
+                        "layer_id": "furniture",
                         "type": "fixture",
                         "name": f"L{f_num} 6-Person Sit-Stand Workstation Cluster {pod_idx+1}",
                         "position": [pos_x, y_base + 0.4, pos_z],
                         "dimensions": {"width": 3.6, "height": 0.75, "depth": 1.4},
                         "material": {"color": "#E2E8F0"}
                     })
-                    # Ergonomic Mesh Task Chairs for each desk pod
                     for chair_i, (cx_off, cz_off) in enumerate([
                         (-1.2, -0.9), (0.0, -0.9), (1.2, -0.9),
                         (-1.2, 0.9), (0.0, 0.9), (1.2, 0.9)
                     ]):
                         elements.append({
                             "id": uid(f"com_chair_{pod_idx+1}_{chair_i+1}_L{f_num}"),
-                            "layer_id": "structural",
+                            "layer_id": "furniture",
                             "type": "fixture",
                             "name": f"L{f_num} Ergonomic Mesh Task Chair",
                             "position": [pos_x + cx_off, y_base + 0.45, pos_z + cz_off],
@@ -985,7 +611,7 @@ class MetaArchitectAgent:
                 # 3. 14-Person Executive Boardroom (East Wing)
                 elements.append({
                     "id": uid(f"com_boardroom_glass_w_L{f_num}"),
-                    "layer_id": "structural",
+                    "layer_id": "architecture",
                     "type": "window",
                     "name": f"L{f_num} Executive Boardroom Acoustic Glass Partition West",
                     "position": [w_bldg / 4 - 3.5, y_base + h_floor / 2, 2.5],
@@ -994,7 +620,7 @@ class MetaArchitectAgent:
                 })
                 elements.append({
                     "id": uid(f"com_boardroom_glass_s_L{f_num}"),
-                    "layer_id": "structural",
+                    "layer_id": "architecture",
                     "type": "window",
                     "name": f"L{f_num} Executive Boardroom Acoustic Glass Partition South",
                     "position": [w_bldg / 4 + 1.0, y_base + h_floor / 2, -1.5],
@@ -1003,7 +629,7 @@ class MetaArchitectAgent:
                 })
                 elements.append({
                     "id": uid(f"com_boardroom_table_L{f_num}"),
-                    "layer_id": "structural",
+                    "layer_id": "furniture",
                     "type": "fixture",
                     "name": f"L{f_num} Solid Walnut 14-Person Conference Table",
                     "position": [w_bldg / 4 + 1.0, y_base + 0.42, 2.5],
@@ -1012,7 +638,7 @@ class MetaArchitectAgent:
                 })
                 elements.append({
                     "id": uid(f"com_boardroom_media_L{f_num}"),
-                    "layer_id": "structural",
+                    "layer_id": "furniture",
                     "type": "fixture",
                     "name": f"L{f_num} 85\" 4K Videoconferencing Presentation Wall",
                     "position": [w_bldg / 4 + 5.2, y_base + 1.8, 2.5],
@@ -1022,7 +648,7 @@ class MetaArchitectAgent:
                 for b_chair_i, b_cz in enumerate([-2.0, -1.2, -0.4, 0.4, 1.2, 2.0]):
                     elements.append({
                         "id": uid(f"com_board_chair_n_{b_chair_i+1}_L{f_num}"),
-                        "layer_id": "structural",
+                        "layer_id": "furniture",
                         "type": "fixture",
                         "name": f"L{f_num} Executive Boardroom Swivel Chair",
                         "position": [w_bldg / 4 + 1.0 - 0.9, y_base + 0.48, 2.5 + b_cz],
@@ -1031,7 +657,7 @@ class MetaArchitectAgent:
                     })
                     elements.append({
                         "id": uid(f"com_board_chair_s_{b_chair_i+1}_L{f_num}"),
-                        "layer_id": "structural",
+                        "layer_id": "furniture",
                         "type": "fixture",
                         "name": f"L{f_num} Executive Boardroom Swivel Chair",
                         "position": [w_bldg / 4 + 1.0 + 0.9, y_base + 0.48, 2.5 + b_cz],
@@ -1043,7 +669,7 @@ class MetaArchitectAgent:
                 for pod_i, pod_x in enumerate([w_bldg / 4 - 2.5, w_bldg / 4 - 0.5, w_bldg / 4 + 1.5]):
                     elements.append({
                         "id": uid(f"com_focus_pod_{pod_i+1}_L{f_num}"),
-                        "layer_id": "structural",
+                        "layer_id": "architecture",
                         "type": "wall",
                         "name": f"L{f_num} Private Acoustic Focus Pod {pod_i+1}",
                         "position": [pod_x, y_base + 1.2, -d_bldg / 4 - 1.5],
@@ -1052,7 +678,7 @@ class MetaArchitectAgent:
                     })
                     elements.append({
                         "id": uid(f"com_focus_door_{pod_i+1}_L{f_num}"),
-                        "layer_id": "structural",
+                        "layer_id": "architecture",
                         "type": "window",
                         "name": f"L{f_num} Focus Pod Acoustic Glass Door",
                         "position": [pod_x, y_base + 1.1, -d_bldg / 4 - 0.8],
@@ -1063,9 +689,9 @@ class MetaArchitectAgent:
                 # 5. Breakout Cafe & Pantry
                 elements.append({
                     "id": uid(f"com_cafe_island_L{f_num}"),
-                    "layer_id": "structural",
+                    "layer_id": "fixtures",
                     "type": "fixture",
-                    "name": f"L{f_num} Breakout Cafe Waterfall Island Bar & Faucet",
+                    "name": f"L{f_num} Breakout Cafe Waterfall Island Bar",
                     "position": [w_bldg / 4 + 4.5, y_base + 0.5, -d_bldg / 4 - 1.5],
                     "dimensions": {"width": 3.4, "height": 0.95, "depth": 1.2},
                     "material": {"color": "#F8FAFC"}
@@ -1083,7 +709,7 @@ class MetaArchitectAgent:
                 # 6. Centralized Restroom Battery (Connected to Core Wet Stacks)
                 elements.append({
                     "id": uid(f"com_restroom_wall_L{f_num}"),
-                    "layer_id": "structural",
+                    "layer_id": "architecture",
                     "type": "wall",
                     "name": f"L{f_num} Core Restroom Battery Enclosure Wall",
                     "position": [0, y_base + h_floor / 2, -d_bldg / 4 - 1.0],
@@ -1092,7 +718,7 @@ class MetaArchitectAgent:
                 })
                 elements.append({
                     "id": uid(f"com_wc_m_L{f_num}"),
-                    "layer_id": "plumbing",
+                    "layer_id": "fixtures",
                     "type": "fixture",
                     "name": f"L{f_num} Commercial Wall-Hung Sensor WC (Male)",
                     "position": [-1.2, y_base + 0.45, -d_bldg / 4 - 2.2],
@@ -1101,7 +727,7 @@ class MetaArchitectAgent:
                 })
                 elements.append({
                     "id": uid(f"com_wc_f_L{f_num}"),
-                    "layer_id": "plumbing",
+                    "layer_id": "fixtures",
                     "type": "fixture",
                     "name": f"L{f_num} Commercial Wall-Hung Sensor WC (Female)",
                     "position": [1.2, y_base + 0.45, -d_bldg / 4 - 2.2],
@@ -1110,7 +736,7 @@ class MetaArchitectAgent:
                 })
                 elements.append({
                     "id": uid(f"com_vanity_L{f_num}"),
-                    "layer_id": "plumbing",
+                    "layer_id": "fixtures",
                     "type": "fixture",
                     "name": f"L{f_num} Commercial Double Vanity with Sensor Faucets",
                     "position": [0, y_base + 0.5, -d_bldg / 4 - 2.2],
@@ -1138,6 +764,160 @@ class MetaArchitectAgent:
                     "material": {"color": "#FEF08A", "opacity": 0.85}
                 })
 
+            # =========================================================================
+            # CASE B: RESIDENTIAL APARTMENTS (2BHK & 3BHK SUITES)
+            # =========================================================================
+            elif is_apartment:
+                # UNIT 1 (WEST 2BHK)
+                x_u1 = -w_bldg / 4 - 1.0
+                elements.append({
+                    "id": uid(f"u1_wall_corridor_L{f_num}"),
+                    "layer_id": "architecture",
+                    "type": "wall",
+                    "name": f"L{f_num} Unit 1 Corridor Wall",
+                    "position": [x_u1 + 4.5, y_base + h_floor / 2, -2.0],
+                    "dimensions": {"width": 0.15, "height": h_floor, "depth": d_bldg / 2 - 1.0},
+                    "material": {"color": mats["wall_inner"]}
+                })
+                elements.append({
+                    "id": uid(f"u1_door_entry_L{f_num}"),
+                    "layer_id": "architecture",
+                    "type": "door",
+                    "name": f"L{f_num} Unit 1 Solid Timber Entrance Door",
+                    "position": [x_u1 + 4.5, y_base + 1.1, 0.5],
+                    "dimensions": {"width": 0.1, "height": 2.2, "depth": 0.9},
+                    "material": {"color": mats["accent"]}
+                })
+                elements.append({
+                    "id": uid(f"u1_sofa_L{f_num}"),
+                    "layer_id": "furniture",
+                    "type": "fixture",
+                    "name": f"L{f_num} Unit 1 L-Sectional Bouclé Sofa & Pillows",
+                    "position": [x_u1 - 1.2, y_base + 0.45, -2.5],
+                    "dimensions": {"width": 3.4, "height": 0.75, "depth": 2.2},
+                    "material": {"color": mats["furniture"]}
+                })
+                elements.append({
+                    "id": uid(f"u1_coffee_table_L{f_num}"),
+                    "layer_id": "furniture",
+                    "type": "fixture",
+                    "name": f"L{f_num} Unit 1 Fluted Oak Coffee Table",
+                    "position": [x_u1 - 1.2, y_base + 0.22, -2.5],
+                    "dimensions": {"width": 1.6, "height": 0.38, "depth": 0.9},
+                    "material": {"color": mats["accent"]}
+                })
+                elements.append({
+                    "id": uid(f"u1_dining_set_L{f_num}"),
+                    "layer_id": "furniture",
+                    "type": "fixture",
+                    "name": f"L{f_num} Unit 1 Solid Walnut Dining Table & 6 Chairs",
+                    "position": [x_u1 + 2.2, y_base + 0.45, -1.8],
+                    "dimensions": {"width": 2.6, "height": 0.75, "depth": 1.1},
+                    "material": {"color": mats["accent"]}
+                })
+                elements.append({
+                    "id": uid(f"u1_kitchen_island_L{f_num}"),
+                    "layer_id": "fixtures",
+                    "type": "fixture",
+                    "name": f"L{f_num} Unit 1 Waterfall Island with Faucet & Barstools",
+                    "position": [x_u1 + 2.2, y_base + 0.5, -4.5],
+                    "dimensions": {"width": 2.8, "height": 0.95, "depth": 1.1},
+                    "material": {"color": "#FFFFFF"}
+                })
+                elements.append({
+                    "id": uid(f"u1_master_bed_L{f_num}"),
+                    "layer_id": "furniture",
+                    "type": "fixture",
+                    "name": f"L{f_num} Unit 1 King Platform Bed & Pillows",
+                    "position": [x_u1 - 1.2, y_base + 0.45, 4.5],
+                    "dimensions": {"width": 2.2, "height": 0.55, "depth": 2.4},
+                    "material": {"color": mats["furniture"]}
+                })
+                elements.append({
+                    "id": uid(f"u1_bed2_L{f_num}"),
+                    "layer_id": "furniture",
+                    "type": "fixture",
+                    "name": f"L{f_num} Unit 1 Bedroom 2 Queen Bed",
+                    "position": [x_u1 + 3.2, y_base + 0.45, 4.5],
+                    "dimensions": {"width": 1.8, "height": 0.55, "depth": 2.0},
+                    "material": {"color": mats["furniture"]}
+                })
+                elements.append({
+                    "id": uid(f"u1_bath_vanity_L{f_num}"),
+                    "layer_id": "fixtures",
+                    "type": "fixture",
+                    "name": f"L{f_num} Unit 1 Floating Double Vanity & Backlit Mirror",
+                    "position": [-w_bldg / 2 + 1.8, y_base + 0.5, 2.5],
+                    "dimensions": {"width": 1.6, "height": 0.85, "depth": 0.6},
+                    "material": {"color": "#1E293B"}
+                })
+                elements.append({
+                    "id": uid(f"u1_bath_wc_L{f_num}"),
+                    "layer_id": "fixtures",
+                    "type": "fixture",
+                    "name": f"L{f_num} Unit 1 Wall-Hung Concealed Cistern WC",
+                    "position": [-w_bldg / 2 + 1.8, y_base + 0.45, 4.2],
+                    "dimensions": {"width": 0.4, "height": 0.45, "depth": 0.65},
+                    "material": {"color": "#FFFFFF"}
+                })
+
+                # UNIT 2 (EAST 3BHK)
+                x_u2 = w_bldg / 4 + 1.0
+                elements.append({
+                    "id": uid(f"u2_wall_corridor_L{f_num}"),
+                    "layer_id": "architecture",
+                    "type": "wall",
+                    "name": f"L{f_num} Unit 2 Corridor Wall",
+                    "position": [x_u2 - 4.5, y_base + h_floor / 2, -2.0],
+                    "dimensions": {"width": 0.15, "height": h_floor, "depth": d_bldg / 2 - 1.0},
+                    "material": {"color": mats["wall_inner"]}
+                })
+                elements.append({
+                    "id": uid(f"u2_door_entry_L{f_num}"),
+                    "layer_id": "architecture",
+                    "type": "door",
+                    "name": f"L{f_num} Unit 2 Solid Timber Entrance Door",
+                    "position": [x_u2 - 4.5, y_base + 1.1, 0.5],
+                    "dimensions": {"width": 0.1, "height": 2.2, "depth": 0.9},
+                    "material": {"color": mats["accent"]}
+                })
+                elements.append({
+                    "id": uid(f"u2_sofa_L{f_num}"),
+                    "layer_id": "furniture",
+                    "type": "fixture",
+                    "name": f"L{f_num} Unit 2 L-Sectional Bouclé Sofa & Pillows",
+                    "position": [x_u2 + 1.2, y_base + 0.45, -2.5],
+                    "dimensions": {"width": 3.4, "height": 0.75, "depth": 2.2},
+                    "material": {"color": mats["furniture"]}
+                })
+                elements.append({
+                    "id": uid(f"u2_master_bed_L{f_num}"),
+                    "layer_id": "furniture",
+                    "type": "fixture",
+                    "name": f"L{f_num} Unit 2 King Platform Bed & Pillows",
+                    "position": [x_u2 + 1.2, y_base + 0.45, 4.5],
+                    "dimensions": {"width": 2.2, "height": 0.55, "depth": 2.4},
+                    "material": {"color": mats["furniture"]}
+                })
+                elements.append({
+                    "id": uid(f"u2_bath_vanity_L{f_num}"),
+                    "layer_id": "fixtures",
+                    "type": "fixture",
+                    "name": f"L{f_num} Unit 2 Floating Double Vanity & Backlit Mirror",
+                    "position": [w_bldg / 2 - 1.8, y_base + 0.5, 2.5],
+                    "dimensions": {"width": 1.6, "height": 0.85, "depth": 0.6},
+                    "material": {"color": "#1E293B"}
+                })
+                elements.append({
+                    "id": uid(f"u2_bath_tub_L{f_num}"),
+                    "layer_id": "fixtures",
+                    "type": "fixture",
+                    "name": f"L{f_num} Unit 2 Freestanding Soaking Tub & Floor Mixer",
+                    "position": [w_bldg / 2 - 1.8, y_base + 0.35, -0.8],
+                    "dimensions": {"width": 1.7, "height": 0.65, "depth": 0.85},
+                    "material": {"color": "#FAFAFA"}
+                })
+
         # =========================================================================
         # 8. ROOFTOP MECHANICAL SCREENING & SKY TERRACE
         # =========================================================================
@@ -1152,7 +932,7 @@ class MetaArchitectAgent:
         })
         elements.append({
             "id": uid("roof_parapet"),
-            "layer_id": "structural",
+            "layer_id": "architecture",
             "type": "window",
             "name": "Rooftop 1.4m Tempered Glass Windbreak Parapet",
             "position": [0, total_height + 0.85, 0],
@@ -1167,15 +947,6 @@ class MetaArchitectAgent:
             "position": [0, total_height + 1.6, 0],
             "dimensions": {"width": 5.0, "height": 3.0, "depth": 4.5},
             "material": {"color": "#171717"}
-        })
-        elements.append({
-            "id": uid("roof_pergola"),
-            "layer_id": "structural",
-            "type": "slab",
-            "name": "Panoramic Sky Lounge Timber Pergola Deck",
-            "position": [-w_bldg / 4, total_height + 2.8, 0],
-            "dimensions": {"width": 8.0, "height": 0.15, "depth": 6.0},
-            "material": {"color": mats["accent"], "roughness": 0.4}
         })
 
         # =========================================================================
@@ -1203,7 +974,7 @@ class MetaArchitectAgent:
             "id": uid("plumb_wet_stack"),
             "layer_id": "plumbing",
             "type": "pipe",
-            "name": f"Vertical {floors}-Story DN110 PVC-U Drainage Stack",
+            "name": f"Vertical {floors}-Story DN150 PVC-U Drainage Wet Stack",
             "position": [w_bldg / 2 - 0.6, total_height / 2.0, -d_bldg / 2 + 1.2],
             "dimensions": {"width": 0.3, "height": total_height, "depth": 0.3},
             "material": {"color": "#06B6D4"}
@@ -1236,16 +1007,13 @@ class MetaArchitectAgent:
         elif is_apartment:
             model_name = f"{floors}-Story High-Rise (2BHK + 3BHK)"
         else:
-            model_name = f"{floors}-Story Architecture ({spec['style']})"
-            
-        if spec["style"] != "Contemporary Modern" and not is_commercial:
-            model_name += f" • {spec['style']}"
+            model_name = f"{floors}-Story Modern Villa"
 
         building_model = {
             "id": project_id,
             "name": model_name,
             "version": int(uuid.uuid4().int % 1000000),
-            "description": f"{floors}-Story Hyper-Realistic OpenBIM Model with {spec['style']} interior finishes, dedicated room partitions, curtains, and MEP risers.",
+            "description": f"{floors}-Story Hyper-Realistic OpenBIM Model with {spec['style']} interior finishes and connected MEP risers.",
             "meta": {
                 "floors": floors,
                 "style": spec["style"],
@@ -1257,21 +1025,42 @@ class MetaArchitectAgent:
             "layers": {
                 "structural": {
                     "id": "structural",
-                    "name": "Structural & Interior Architecture",
+                    "name": "Structural Framework",
                     "visible": True,
-                    "color": "#000000",
+                    "color": "#D4FF32",
                     "elements": [el for el in elements if el["layer_id"] == "structural"]
+                },
+                "architecture": {
+                    "id": "architecture",
+                    "name": "Architectural Shell & Walls",
+                    "visible": True,
+                    "color": "#E2E8F0",
+                    "elements": [el for el in elements if el["layer_id"] == "architecture"]
+                },
+                "furniture": {
+                    "id": "furniture",
+                    "name": "Interior Furniture & Workstations",
+                    "visible": True,
+                    "color": "#A78BFA",
+                    "elements": [el for el in elements if el["layer_id"] == "furniture"]
+                },
+                "fixtures": {
+                    "id": "fixtures",
+                    "name": "Sanitary & Kitchen Fixtures",
+                    "visible": True,
+                    "color": "#F43F5E",
+                    "elements": [el for el in elements if el["layer_id"] == "fixtures"]
                 },
                 "electrical": {
                     "id": "electrical",
-                    "name": "Electrical Systems",
+                    "name": "Electrical & HVAC Infrastructure",
                     "visible": True,
                     "color": "#F59E0B",
                     "elements": [el for el in elements if el["layer_id"] == "electrical"]
                 },
                 "plumbing": {
                     "id": "plumbing",
-                    "name": "Plumbing Systems",
+                    "name": "Plumbing & Drainage Wet Stacks",
                     "visible": True,
                     "color": "#06B6D4",
                     "elements": [el for el in elements if el["layer_id"] == "plumbing"]
@@ -1389,7 +1178,6 @@ def _build_default_rooms_for_unit(unit_type: UnitType) -> List[RoomProgram]:
             RoomProgram(room_type=RoomType.BATHROOM_COMMON, name="Executive Restrooms", min_area_sqm=10.0, target_area_sqm=12.0, requires_plumbing=True),
         ]
     else:
-        # Generic Custom unit
         return [
             RoomProgram(room_type=RoomType.LIVING_ROOM, name="Main Area", min_area_sqm=20.0, target_area_sqm=25.0, requires_daylight=True),
             RoomProgram(room_type=RoomType.BEDROOM, name="Room 1", min_area_sqm=12.0, target_area_sqm=15.0, requires_daylight=True),
@@ -1423,14 +1211,14 @@ def parse_prompt_to_design_spec(prompt: str) -> DesignSpec:
         typology = BuildingTypology.VILLA
         occupancy = OccupancyCategory.RESIDENTIAL_SINGLE_FAMILY
         zoning = ZoningClassification.SUBURBAN_ESTATE
+    elif any(k in p for k in ["commercial", "office", "headquarters", "workplace", "workstation", "boardroom", "corporate"]):
+        typology = BuildingTypology.COMMERCIAL
+        occupancy = OccupancyCategory.BUSINESS_OFFICE
+        zoning = ZoningClassification.COMMERCIAL_URBAN
     elif any(k in p for k in ["tower", "skyscraper", "high rise", "high-rise"]):
         typology = BuildingTypology.TOWER
         occupancy = OccupancyCategory.RESIDENTIAL_MULTI_FAMILY
         zoning = ZoningClassification.RESIDENTIAL_HIGH_DENSITY
-    elif any(k in p for k in ["commercial", "office", "headquarters", "workplace"]):
-        typology = BuildingTypology.COMMERCIAL
-        occupancy = OccupancyCategory.BUSINESS_OFFICE
-        zoning = ZoningClassification.COMMERCIAL_URBAN
     elif any(k in p for k in ["mixed use", "mixed-use", "retail and residential"]):
         typology = BuildingTypology.MIXED_USE
         occupancy = OccupancyCategory.MERCANTILE_RETAIL
@@ -1471,16 +1259,16 @@ def parse_prompt_to_design_spec(prompt: str) -> DesignSpec:
         aesthetic_style = AestheticStyle.INDUSTRIAL_LOFT
     elif any(k in p for k in ["biophilic", "sustainable", "green", "plants", "nature"]):
         aesthetic_style = AestheticStyle.BIOPHILIC_GREEN
+    elif any(k in p for k in ["japandi", "scandinavian", "light oak", "light timber"]):
+        aesthetic_style = AestheticStyle.JAPANDI_SCANDINAVIAN
     elif any(k in p for k in ["art deco", "artdeco", "glamour"]):
         aesthetic_style = AestheticStyle.ART_DECO
     elif any(k in p for k in ["brutalist", "raw concrete", "monolithic"]):
         aesthetic_style = AestheticStyle.BRUTALIST_CONCRETE
     elif any(k in p for k in ["mediterranean", "terracotta", "warm stone"]):
         aesthetic_style = AestheticStyle.MEDITERRANEAN_WARM
-    elif any(k in p for k in ["contemporary", "modern", "minimalist"]):
-        aesthetic_style = AestheticStyle.CONTEMPORARY_MODERN
     else:
-        aesthetic_style = AestheticStyle.JAPANDI_SCANDINAVIAN
+        aesthetic_style = AestheticStyle.CONTEMPORARY_MODERN
 
     # 5. MEP Strategy
     if any(k in p for k in ["chilled water", "central chiller"]):
@@ -1508,188 +1296,88 @@ def parse_prompt_to_design_spec(prompt: str) -> DesignSpec:
         plumbing_system=PlumbingSystemType.TWO_PIPE_SOIL_WASTE,
         fire_protection=FireProtectionType.PRESSURIZED_STAIRS_WET_RISER if floors >= 4 else FireProtectionType.SPRINKLER_SYSTEM,
         rooftop_mep=rooftop,
-        solar_capacity_kwp=24.0 if floors >= 4 else 10.0,
-        water_storage_liters=25000.0 if floors >= 4 else 5000.0,
-        has_emergency_generator=(floors >= 4),
     )
 
-    # 6. Site Parameters & Setbacks
-    # Check for dimension keywords
-    dim_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:m|meter|meters)?\s*(?:x|by|\*)\s*(\d+(?:\.\d+)?)\s*(?:m|meter|meters)?', p)
-    if dim_match:
-        w = float(dim_match.group(1))
-        d = float(dim_match.group(2))
-        plot_w = max(15.0, w)
-        plot_d = max(15.0, d)
-        plot_area = plot_w * plot_d
-    else:
-        if typology == BuildingTypology.TOWER or floors >= 6:
-            plot_w, plot_d, plot_area = 40.0, 50.0, 2000.0
-        elif typology == BuildingTypology.VILLA:
-            plot_w, plot_d, plot_area = 25.0, 30.0, 750.0
-        elif typology == BuildingTypology.COMMERCIAL:
-            plot_w, plot_d, plot_area = 35.0, 45.0, 1575.0
-        else:
-            plot_w, plot_d, plot_area = 30.0, 40.0, 1200.0
-
-    front_sb = min(4.5, plot_d * 0.15)
-    rear_sb = min(3.0, plot_d * 0.10)
-    side_sb = min(2.5, plot_w * 0.10)
-
-    site_params = SiteParameters(
-        plot_width_m=plot_w,
-        plot_depth_m=plot_d,
-        total_area_sqm=plot_area,
-        setbacks=SetbackSpec(
-            front_m=round(front_sb, 1),
-            rear_m=round(rear_sb, 1),
-            side_left_m=round(side_sb, 1),
-            side_right_m=round(side_sb, 1),
-        ),
-        zoning=zoning,
-        max_far=4.5 if floors >= 6 else 2.5,
-        max_ground_coverage_ratio=0.55 if floors >= 6 else 0.65,
-        orientation_degrees=0.0,
-    )
-
-    # 7. Unit Requirements & Storeys
-    has_studio = "studio" in p
-    has_1bhk = "1bhk" in p or "1 bhk" in p or "1 bedroom" in p or "one bedroom" in p
-    has_2bhk = "2bhk" in p or "2 bhk" in p or "2 bedroom" in p or "two bedroom" in p
-    has_3bhk = "3bhk" in p or "3 bhk" in p or "3 bedroom" in p or "three bedroom" in p
-    has_4bhk = "4bhk" in p or "4 bhk" in p or "4 bedroom" in p
-    has_penthouse = "penthouse" in p
-    has_office = "office" in p or typology == BuildingTypology.COMMERCIAL
-
-    # Determine default unit mix per floor
-    floor_units_template: List[Tuple[UnitType, float]] = []
-    if has_office:
-        floor_units_template.append((UnitType.COMMERCIAL_OFFICE, 180.0))
-    else:
-        if has_studio:
-            floor_units_template.append((UnitType.STUDIO, 40.0))
-        if has_1bhk:
-            floor_units_template.append((UnitType.BHK1, 55.0))
-        if has_2bhk:
-            floor_units_template.append((UnitType.BHK2, 90.0))
-        if has_3bhk:
-            floor_units_template.append((UnitType.BHK3, 160.0))
-        if has_4bhk:
-            floor_units_template.append((UnitType.BHK4, 210.0))
-        if has_penthouse:
-            floor_units_template.append((UnitType.PENTHOUSE, 280.0))
-
-        if not floor_units_template:
-            # Smart defaults based on typology
-            if typology == BuildingTypology.VILLA:
-                floor_units_template = [(UnitType.BHK3, 160.0)]
-            elif typology == BuildingTypology.TOWER or floors >= 6:
-                floor_units_template = [(UnitType.BHK2, 90.0), (UnitType.BHK3, 160.0)]
-            elif floors == 1:
-                floor_units_template = [(UnitType.BHK2, 90.0)]
-            else:
-                floor_units_template = [(UnitType.BHK2, 90.0)]
-
-    # Floor heights
-    f2f_height = 3.5 if typology == BuildingTypology.COMMERCIAL else 3.2
-    ground_height = 4.0 if (typology in [BuildingTypology.TOWER, BuildingTypology.COMMERCIAL, BuildingTypology.MIXED_USE]) else 3.6
-
-    # Build StoreySpec sequence
+    # 6. Storey & Spatial Programs
     storeys_list: List[StoreySpec] = []
-    current_elevation = 0.0
+    h_floor = 3.8 if typology == BuildingTypology.COMMERCIAL else 3.2
 
-    for s_idx in range(floors):
-        is_grd = (s_idx == 0)
-        is_roof = (s_idx == floors - 1)
-        h = ground_height if is_grd else f2f_height
-
-        s_name = "Ground Floor" if is_grd else f"Level {s_idx}"
-        if is_roof and floors > 1:
-            s_name = f"Level {s_idx} (Penthouse / Sky Deck)" if (has_penthouse or floors >= 8) else f"Level {s_idx}"
-
-        # Target Storey Use
-        if is_grd and (typology == BuildingTypology.TOWER or typology == BuildingTypology.COMMERCIAL):
-            use_type = StoreyUseType.COMMERCIAL_LOBBY if typology == BuildingTypology.TOWER else StoreyUseType.RETAIL
-        elif is_roof and (has_penthouse or floors >= 8):
-            use_type = StoreyUseType.AMENITY_SKY_LOUNGE
-        elif typology == BuildingTypology.COMMERCIAL:
-            use_type = StoreyUseType.OFFICE
-        else:
-            use_type = StoreyUseType.RESIDENTIAL
-
-        # Unit mix for this floor
-        unit_mix_for_storey: List[UnitRequirement] = []
-        if is_roof and (has_penthouse or (floors >= 8 and "penthouse" in p)):
-            penthouse_rooms = _build_default_rooms_for_unit(UnitType.PENTHOUSE)
-            unit_mix_for_storey.append(
-                UnitRequirement(
-                    unit_id=f"u_{s_idx}_ph",
-                    unit_type=UnitType.PENTHOUSE,
-                    name=f"Penthouse Suite {s_idx}01",
-                    target_area_sqm=280.0,
-                    required_rooms=penthouse_rooms,
-                    balcony_count=2,
-                    private_access=True,
-                )
+    if typology == BuildingTypology.COMMERCIAL:
+        unit_mix = [
+            UnitRequirement(
+                unit_type=UnitType.COMMERCIAL_OFFICE,
+                name="Commercial Office Floorplate",
+                target_area_sqm=300.0,
+                required_rooms=_build_default_rooms_for_unit(UnitType.COMMERCIAL_OFFICE),
             )
-        else:
-            for u_sub_idx, (u_type, u_area) in enumerate(floor_units_template):
-                rooms = _build_default_rooms_for_unit(u_type)
-                u_name = f"Unit {s_idx}{u_sub_idx + 1:02d} ({u_type.value})"
-                unit_mix_for_storey.append(
-                    UnitRequirement(
-                        unit_id=f"u_{s_idx}_{u_sub_idx + 1:02d}",
-                        unit_type=u_type,
-                        name=u_name,
-                        target_area_sqm=u_area,
-                        required_rooms=rooms,
-                        balcony_count=2 if u_type in [UnitType.BHK3, UnitType.BHK4] else 1,
-                    )
-                )
+        ]
+    elif typology == BuildingTypology.VILLA:
+        unit_mix = [
+            UnitRequirement(
+                unit_type=UnitType.CUSTOM,
+                name="Villa Living Suite",
+                target_area_sqm=180.0,
+                required_rooms=_build_default_rooms_for_unit(UnitType.CUSTOM),
+            )
+        ]
+    elif "1bhk" in p:
+        unit_mix = [
+            UnitRequirement(
+                unit_type=UnitType.BHK1,
+                name="1BHK Suite",
+                target_area_sqm=65.0,
+                required_rooms=_build_default_rooms_for_unit(UnitType.BHK1),
+            )
+        ]
+    else:
+        unit_mix = [
+            UnitRequirement(
+                unit_type=UnitType.BHK2,
+                name="Unit 1 2BHK",
+                target_area_sqm=90.0,
+                required_rooms=_build_default_rooms_for_unit(UnitType.BHK2),
+            ),
+            UnitRequirement(
+                unit_type=UnitType.BHK3,
+                name="Unit 2 3BHK",
+                target_area_sqm=160.0,
+                required_rooms=_build_default_rooms_for_unit(UnitType.BHK3),
+            ),
+        ]
 
+    for floor_idx in range(floors):
+        elev = floor_idx * h_floor
         storeys_list.append(
             StoreySpec(
-                storey_index=s_idx,
-                name=s_name,
-                elevation_m=round(current_elevation, 2),
-                height_m=round(h, 2),
-                is_ground=is_grd,
-                is_rooftop=is_roof,
-                is_basement=False,
-                target_use=use_type,
-                unit_mix=unit_mix_for_storey,
+                storey_index=floor_idx,
+                name=f"Level {floor_idx + 1}" if floor_idx > 0 else "Ground Floor",
+                elevation_m=elev,
+                height_m=h_floor,
+                is_ground=(floor_idx == 0),
+                is_rooftop=(floor_idx == floors - 1),
+                unit_mix=unit_mix,
             )
         )
-        current_elevation += h
 
-    # Project Name
-    proj_title = f"{floors}-Story {typology.value} ({aesthetic_style.value})"
-    if "villa" in p:
-        proj_title = f"{aesthetic_style.value} Modern Villa"
-    elif "tower" in p or floors >= 8:
-        proj_title = f"{floors}-Story {aesthetic_style.value} Tower"
+    site_width = 30.0 + (floors * 0.5)
+    site_depth = 40.0 + (floors * 0.5)
 
     spec = DesignSpec(
-        spec_id=str(uuid.uuid4()),
-        project_name=proj_title,
-        description=f"Generated architectural DesignSpec from prompt: {prompt[:200]}",
-        version="1.0.0",
-        site=site_params,
+        project_name=f"{floors}-Storey {typology.value.title()}",
+        site=SiteParameters(
+            plot_width_m=site_width,
+            plot_depth_m=site_depth,
+            total_area_sqm=site_width * site_depth,
+            setbacks=SetbackSpec(front_m=4.0, rear_m=3.0, side_left_m=3.0, side_right_m=3.0),
+            zoning=zoning,
+        ),
         building_typology=typology,
         occupancy_category=occupancy,
         structural_system=structural_sys,
         total_storeys=floors,
-        floor_to_floor_height_m=round(f2f_height, 2),
-        ground_floor_height_m=round(ground_height, 2),
-        basement_storeys=0,
         storeys=storeys_list,
-        mep_strategy=mep,
         aesthetic_palette=AestheticPalette(style=aesthetic_style),
+        mep_strategy=mep,
     )
 
     return spec
-
-
-def compile_design_spec_to_spatial_hierarchy(spec: DesignSpec) -> SpatialNode:
-    """Compiles a DesignSpec into a canonical SpatialNode tree."""
-    return _compile_tree(spec)

@@ -71,6 +71,9 @@ export const StudioPage: React.FC<StudioPageProps> = ({
 
   const [layerVisibility, setLayerVisibility] = useState<Record<string, boolean>>({
     structural: true,
+    architecture: true,
+    furniture: true,
+    fixtures: true,
     electrical: true,
     plumbing: true,
   });

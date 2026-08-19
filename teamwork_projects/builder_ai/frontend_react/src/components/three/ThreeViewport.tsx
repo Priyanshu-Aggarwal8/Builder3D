@@ -83,7 +83,7 @@ export const ThreeViewport: React.FC<ThreeViewportProps> = ({
   selectedElementId,
   renderMode = 'shaded',
   showGrid = true,
-  layerVisibility = { structural: true, electrical: true, plumbing: true },
+  layerVisibility = { structural: true, architecture: true, furniture: true, fixtures: true, electrical: true, plumbing: true },
   selectedFloor = null,
   explodeRatio = 0.0,
   isCutaway = false,
