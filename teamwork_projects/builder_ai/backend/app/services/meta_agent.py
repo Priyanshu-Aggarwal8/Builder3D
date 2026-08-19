@@ -2,7 +2,7 @@ import json
 import uuid
 import re
 import copy
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 def uid(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:6]}"
@@ -230,26 +230,78 @@ class MetaArchitectAgent:
                 "opacity": 0.4
             }
 
+    def _extract_active_meta(self, model: Dict[str, Any]) -> Tuple[int, str, str]:
+        meta = model.get("meta", {})
+        name_l = model.get("name", "").lower()
+
+        # 1. Actual Floor Count
+        floors = meta.get("floors")
+        if not floors:
+            m_floor = re.search(r'(\d+)\s*(?:-|\s)*(?:story|storey|floor|stories|floors|level|levels)', name_l)
+            if m_floor:
+                floors = int(m_floor.group(1))
+            else:
+                all_els = []
+                for layer in model.get("layers", {}).values():
+                    all_els.extend(layer.get("elements", []))
+                all_els.extend(model.get("generated_elements", []))
+                elevations = [el.get("position", [0, 0, 0])[1] for el in all_els if el.get("type") in ["slab", "wall"]]
+                max_y = max(elevations, default=3.2)
+                floors = max(1, round(max_y / 3.2))
+
+        # 2. Typology
+        typology = meta.get("typology")
+        if not typology:
+            if any(k in name_l for k in ["commercial", "office", "headquarters", "tower"]):
+                typology = "commercial"
+            elif any(k in name_l for k in ["villa", "mansion", "house", "residence", "bungalow"]):
+                typology = "villa"
+            elif any(k in name_l for k in ["penthouse", "apartment"]):
+                typology = "apartment"
+            else:
+                typology = "residential"
+
+        # 3. Style
+        style = meta.get("style")
+        if not style:
+            if "japandi" in name_l:
+                style = "Japandi Scandinavian"
+            elif "biophilic" in name_l:
+                style = "Biophilic Green"
+            elif typology == "commercial":
+                style = "Corporate Modern"
+            else:
+                style = "Contemporary Modern"
+
+        return floors, typology, style
+
     def modify_existing_model(self, existing_model: Dict[str, Any], prompt: str) -> Dict[str, Any]:
         model = copy.deepcopy(existing_model)
         p = prompt.lower()
-        meta = model.get("meta", {})
-        current_floors = meta.get("floors", 12)
-        current_style = meta.get("style", "Corporate Modern" if "commercial" in model.get("name", "").lower() else "Contemporary Modern")
-        current_typology = meta.get("typology", "commercial" if "commercial" in model.get("name", "").lower() else "residential")
+        current_floors, current_typology, current_style = self._extract_active_meta(model)
+        model.setdefault("meta", {})["floors"] = current_floors
+        model.setdefault("meta", {})["typology"] = current_typology
+        model.setdefault("meta", {})["style"] = current_style
 
-        # 1. Floor Count Changes
+        is_explicit_change = any(k in p for k in [
+            "change to", "make it", "convert to", "set to", "expand to", "add floors",
+            "reduce to", "increase to", "switch to", "upgrade to", "rebuild as", "make the building"
+        ])
+
+        # 1. Floor Count Changes (ONLY when explicitly commanded, never on questions or descriptions)
         floor_match = re.search(r'(\d+)\s*(?:-|\s)*(?:story|storey|floor|stories|floors|level|levels)', p)
-        if floor_match:
+        if floor_match and is_explicit_change and not p.endswith("?"):
             new_floors = max(1, min(36, int(floor_match.group(1))))
-            combined_prompt = f"{new_floors}-story {current_typology} building with {current_style} style. {prompt}"
-            return self.synthesize_model(combined_prompt, model.get("id", 1))
+            if new_floors != current_floors:
+                combined_prompt = f"{new_floors}-story {current_typology} building with {current_style} style. {prompt}"
+                return self.synthesize_model(combined_prompt, model.get("id", 1))
 
-        # 2. Typology Conversions
-        if any(k in p for k in ["commercial", "office", "workstation", "boardroom"]) and current_typology != "commercial":
-            return self.synthesize_model(f"{current_floors}-story commercial office tower with {current_style} style. {prompt}", model.get("id", 1))
-        elif any(k in p for k in ["residential", "apartment", "villa", "2bhk", "3bhk"]) and current_typology == "commercial":
-            return self.synthesize_model(f"{current_floors}-story residential building with 2BHK and 3BHK suites. {prompt}", model.get("id", 1))
+        # 2. Typology Conversions (ONLY when explicitly commanded)
+        if is_explicit_change and not p.endswith("?"):
+            if any(k in p for k in ["commercial", "office", "workstation", "boardroom"]) and current_typology != "commercial":
+                return self.synthesize_model(f"{current_floors}-story commercial office tower with {current_style} style. {prompt}", model.get("id", 1))
+            elif any(k in p for k in ["residential", "apartment", "villa", "2bhk", "3bhk"]) and current_typology == "commercial":
+                return self.synthesize_model(f"{current_floors}-story residential building with 2BHK and 3BHK suites. {prompt}", model.get("id", 1))
 
         # 3. Multi-Clause Natural Color & Material Target Matching
         all_layers = model.get("layers", {})
@@ -917,6 +969,87 @@ class MetaArchitectAgent:
                     "dimensions": {"width": 1.7, "height": 0.65, "depth": 0.85},
                     "material": {"color": "#FAFAFA"}
                 })
+
+            # =========================================================================
+            # CASE C: RESIDENTIAL VILLA / PRIVATE HOUSE (1, 2, 3 STOREY HOMES)
+            # =========================================================================
+            else:
+                if f_num == 1:
+                    # Ground Level: Great Room Living Suite, Waterfall Kitchen Island & Dining Table
+                    elements.append({
+                        "id": uid(f"villa_media_wall_L{f_num}"),
+                        "layer_id": "architecture",
+                        "type": "wall",
+                        "name": "Living Room Media Feature Wall",
+                        "position": [-w_bldg / 2 + 1.2, y_base + h_floor / 2, 0],
+                        "dimensions": {"width": 0.3, "height": h_floor - 0.2, "depth": 4.5},
+                        "material": {"color": mats["accent"]}
+                    })
+                    elements.append({
+                        "id": uid(f"villa_sofa_L{f_num}"),
+                        "layer_id": "furniture",
+                        "type": "fixture",
+                        "name": "Living Room Low-Profile Bouclé Sectional Sofa",
+                        "position": [-w_bldg / 4, y_base + 0.45, 1.5],
+                        "dimensions": {"width": 3.4, "height": 0.75, "depth": 2.2},
+                        "material": {"color": mats["furniture"]}
+                    })
+                    elements.append({
+                        "id": uid(f"villa_coffee_table_L{f_num}"),
+                        "layer_id": "furniture",
+                        "type": "fixture",
+                        "name": "Calacatta Marble Living Coffee Table",
+                        "position": [-w_bldg / 4, y_base + 0.22, 1.5],
+                        "dimensions": {"width": 1.6, "height": 0.38, "depth": 0.9},
+                        "material": {"color": "#F8FAFC"}
+                    })
+                    elements.append({
+                        "id": uid(f"villa_kitchen_island_L{f_num}"),
+                        "layer_id": "fixtures",
+                        "type": "fixture",
+                        "name": "Waterfall Calacatta Gold Kitchen Island",
+                        "position": [w_bldg / 4, y_base + 0.5, -2.5],
+                        "dimensions": {"width": 3.2, "height": 0.95, "depth": 1.2},
+                        "material": {"color": "#F8FAFC"}
+                    })
+                    elements.append({
+                        "id": uid(f"villa_dining_table_L{f_num}"),
+                        "layer_id": "furniture",
+                        "type": "fixture",
+                        "name": "Solid Walnut 8-Seater Dining Table & Chairs",
+                        "position": [w_bldg / 4, y_base + 0.45, 2.5],
+                        "dimensions": {"width": 2.6, "height": 0.75, "depth": 1.1},
+                        "material": {"color": mats["accent"]}
+                    })
+                else:
+                    # Upper Storeys: Master Bedroom Suite & Spa Bathroom
+                    elements.append({
+                        "id": uid(f"villa_master_bed_L{f_num}"),
+                        "layer_id": "furniture",
+                        "type": "fixture",
+                        "name": f"Level {f_num} Master King Platform Bed & Fluted Headboard",
+                        "position": [-w_bldg / 4, y_base + 0.45, 1.5],
+                        "dimensions": {"width": 2.3, "height": 0.6, "depth": 2.5},
+                        "material": {"color": mats["furniture"]}
+                    })
+                    elements.append({
+                        "id": uid(f"villa_bath_tub_L{f_num}"),
+                        "layer_id": "fixtures",
+                        "type": "fixture",
+                        "name": f"Level {f_num} Master Freestanding Soaking Tub",
+                        "position": [w_bldg / 4 + 1.0, y_base + 0.35, -2.0],
+                        "dimensions": {"width": 1.7, "height": 0.65, "depth": 0.85},
+                        "material": {"color": "#FAFAFA"}
+                    })
+                    elements.append({
+                        "id": uid(f"villa_double_vanity_L{f_num}"),
+                        "layer_id": "fixtures",
+                        "type": "fixture",
+                        "name": f"Level {f_num} Master Floating Double Vanity",
+                        "position": [w_bldg / 4 + 1.0, y_base + 0.5, 1.5],
+                        "dimensions": {"width": 1.6, "height": 0.85, "depth": 0.6},
+                        "material": {"color": "#1E293B"}
+                    })
 
         # =========================================================================
         # 8. ROOFTOP MECHANICAL SCREENING & SKY TERRACE
