@@ -82,13 +82,15 @@ class ArchitectConversationAgent:
         msg_lower = msg_clean.lower()
 
         # =========================================================================
-        # CASE 1: In-Place Modification of Active Model
+        # CASE 1: In-Place Modification of Active Model (All Subsequent Commands)
         # =========================================================================
-        if current_model and self._is_modification_intent(msg_lower) and not any(k in msg_lower for k in ["new building", "create new", "from scratch", "start over"]):
+        is_new_creation = any(k in msg_lower for k in ["new building", "create new", "from scratch", "start over", "brand new project", "reset model"])
+        
+        if current_model and not is_new_creation and not synthesize_now:
             model_name = current_model.get("name", "Active Building")
             meta = current_model.get("meta", {})
-            floors = meta.get("floors", 6)
-            style = meta.get("style", "Contemporary")
+            floors = meta.get("floors", 12)
+            style = meta.get("style", "Contemporary Modern")
 
             updated_model = meta_architect_agent.modify_existing_model(current_model, user_message)
             all_elements_count = sum(len(l.get("elements", [])) for l in updated_model.get("layers", {}).values())
@@ -96,9 +98,9 @@ class ArchitectConversationAgent:
             ai_text = (
                 f"✓ **Refined {updated_model.get('name', model_name)} in-place**:\n\n"
                 f"• **Instruction Applied**: *\"{user_message}\"*\n"
-                f"• **Current Scale**: {updated_model.get('meta', {}).get('floors', floors)} Stories • {updated_model.get('meta', {}).get('style', style)}\n"
+                f"• **Active Scale**: {updated_model.get('meta', {}).get('floors', floors)} Stories • {updated_model.get('meta', {}).get('style', style)}\n"
                 f"• **BIM Components**: {all_elements_count} elements active in viewport\n\n"
-                f"The 3D model in your studio canvas has been updated in real-time. Would you like to further refine room boundaries, adjust facade mullions, or inspect MEP layers?"
+                f"The 3D model in your studio canvas has been updated in real-time."
             )
 
             state.conversation_history.append({"role": "assistant", "content": ai_text})

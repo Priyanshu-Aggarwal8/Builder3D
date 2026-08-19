@@ -150,35 +150,78 @@ class MetaArchitectAgent:
     def modify_existing_model(self, existing_model: Dict[str, Any], prompt: str) -> Dict[str, Any]:
         model = copy.deepcopy(existing_model)
         p = prompt.lower()
+        meta = model.get("meta", {})
+        current_floors = meta.get("floors", 12)
+        current_style = meta.get("style", "Contemporary Modern")
+        current_typology = meta.get("typology", "commercial" if "commercial" in model.get("name", "").lower() else "residential")
 
+        # 1. Floor Count Changes
         floor_match = re.search(r'(\d+)\s*(?:-|\s)*(?:story|storey|floor|stories|floors|level|levels)', p)
         if floor_match:
             new_floors = max(1, min(36, int(floor_match.group(1))))
-            return self.synthesize_model(f"{new_floors}-story building with {model.get('meta', {}).get('style', 'Japandi Scandinavian')}", model.get("id", 1))
+            combined_prompt = f"{new_floors}-story {current_typology} building with {current_style} style. {prompt}"
+            return self.synthesize_model(combined_prompt, model.get("id", 1))
 
+        # 2. Typology Conversions (e.g. "convert to commercial office" or "convert to residential apartments")
+        if any(k in p for k in ["commercial", "office", "workstation", "boardroom"]) and current_typology != "commercial":
+            return self.synthesize_model(f"{current_floors}-story commercial office tower with {current_style} style. {prompt}", model.get("id", 1))
+        elif any(k in p for k in ["residential", "apartment", "villa", "2bhk", "3bhk"]) and current_typology == "commercial":
+            return self.synthesize_model(f"{current_floors}-story residential building with 2BHK and 3BHK suites. {prompt}", model.get("id", 1))
+
+        # 3. Style & Material Palettes
         new_style = None
-        if any(k in p for k in ["luxury", "calacatta", "marble"]):
+        if any(k in p for k in ["luxury", "calacatta", "marble", "italian"]):
             new_style = "Luxury Calacatta"
-        elif any(k in p for k in ["industrial", "loft", "concrete"]):
+        elif any(k in p for k in ["industrial", "loft", "concrete", "steel"]):
             new_style = "Industrial Loft"
-        elif any(k in p for k in ["japandi", "scandinavian", "oak"]):
+        elif any(k in p for k in ["japandi", "scandinavian", "oak", "wood", "timber"]):
             new_style = "Japandi Scandinavian"
-        elif any(k in p for k in ["biophilic", "green", "timber"]):
+        elif any(k in p for k in ["biophilic", "green", "plants", "nature"]):
             new_style = "Biophilic Green"
+        elif any(k in p for k in ["dark", "charcoal", "black", "smoked"]):
+            new_style = "Contemporary Modern"
 
         if new_style:
             mats = self.get_style_materials(new_style)
-            model["meta"]["style"] = new_style
+            meta["style"] = new_style
             if "layers" in model and "structural" in model["layers"]:
                 for el in model["layers"]["structural"].get("elements", []):
                     name_lower = el.get("name", "").lower()
-                    if "sofa" in name_lower or "bed" in name_lower or "lounge" in name_lower:
-                        el["material"]["color"] = mats["furniture"]
-                    elif "floor" in name_lower or "finish" in name_lower:
-                        el["material"]["color"] = mats["floor_living"]
+                    if "sofa" in name_lower or "bed" in name_lower or "lounge" in name_lower or "chair" in name_lower:
+                        el.setdefault("material", {})["color"] = mats["furniture"]
+                    elif "floor" in name_lower or "finish" in name_lower or "deck" in name_lower:
+                        el.setdefault("material", {})["color"] = mats["floor_living"]
                     elif "wall" in name_lower:
-                        el["material"]["color"] = mats["wall"]
-            return model
+                        el.setdefault("material", {})["color"] = mats["wall"]
+                    elif "mullion" in name_lower:
+                        el.setdefault("material", {})["color"] = mats["mullion"]
+                    elif "glass" in name_lower or "window" in name_lower:
+                        el.setdefault("material", {})["color"] = mats["glass"]
+
+        # 4. Facade, Mullion & Glazing Customizations
+        if any(k in p for k in ["dark glass", "tinted glass", "smoked glass", "black glass"]):
+            for el in model.get("layers", {}).get("structural", {}).get("elements", []):
+                if el.get("type") in ["window"] or "glass" in el.get("name", "").lower():
+                    el.setdefault("material", {})["color"] = "#0F172A"
+                    el["material"]["opacity"] = 0.6
+        elif any(k in p for k in ["blue glass", "cyan glass", "low-e", "reflective"]):
+            for el in model.get("layers", {}).get("structural", {}).get("elements", []):
+                if el.get("type") in ["window"] or "glass" in el.get("name", "").lower():
+                    el.setdefault("material", {})["color"] = "#38BDF8"
+                    el["material"]["opacity"] = 0.35
+
+        if any(k in p for k in ["bronze mullion", "gold mullion", "brass mullion", "bronze trim"]):
+            for el in model.get("layers", {}).get("structural", {}).get("elements", []):
+                if "mullion" in el.get("name", "").lower() or "fascia" in el.get("name", "").lower():
+                    el.setdefault("material", {})["color"] = "#B45309"
+        elif any(k in p for k in ["black mullion", "dark mullion", "charcoal mullion"]):
+            for el in model.get("layers", {}).get("structural", {}).get("elements", []):
+                if "mullion" in el.get("name", "").lower():
+                    el.setdefault("material", {})["color"] = "#171717"
+
+        # 5. Amenity Additions (Pool, Solar, Chiller, Planters, Pergola)
+        h_floor = 3.8 if current_typology == "commercial" else 3.2
+        total_h = current_floors * h_floor
 
         if "pool" in p and not any("pool" in el.get("name", "").lower() for el in model.get("layers", {}).get("structural", {}).get("elements", [])):
             pool_el = {
@@ -186,26 +229,52 @@ class MetaArchitectAgent:
                 "layer_id": "structural",
                 "type": "slab",
                 "name": "Rooftop Infinity Edge Swimming Pool",
-                "position": [6.0, model.get("meta", {}).get("floors", 12) * 3.2 + 0.3, 0],
-                "dimensions": {"width": 6.0, "height": 0.5, "depth": 9.0},
-                "material": {"color": "#06B6D4", "opacity": 0.85}
+                "position": [6.0, total_h + 0.3, 0],
+                "dimensions": {"width": 7.0, "height": 0.5, "depth": 10.0},
+                "material": {"color": "#06B6D4", "opacity": 0.85, "transmission": 0.8}
             }
-            model["layers"]["structural"]["elements"].append(pool_el)
-            return model
+            model.setdefault("layers", {}).setdefault("structural", {}).setdefault("elements", []).append(pool_el)
 
-        if "solar" in p and not any("solar" in el.get("name", "").lower() for el in model.get("layers", {}).get("electrical", {}).get("elements", [])):
+        if any(k in p for k in ["solar", "photovoltaic", "pv array"]) and not any("solar" in el.get("name", "").lower() for el in model.get("layers", {}).get("electrical", {}).get("elements", [])):
             solar_el = {
                 "id": uid("solar_pv"),
                 "layer_id": "electrical",
                 "type": "fixture",
                 "name": "Rooftop High-Efficiency Photovoltaic Solar Array (18kWp)",
-                "position": [0, model.get("meta", {}).get("floors", 12) * 3.2 + 3.2, 0],
+                "position": [0, total_h + 3.2, 0],
                 "dimensions": {"width": 14.0, "height": 0.15, "depth": 7.0},
                 "material": {"color": "#0284C7"}
             }
-            model["layers"]["electrical"]["elements"].append(solar_el)
-            return model
+            model.setdefault("layers", {}).setdefault("electrical", {}).setdefault("elements", []).append(solar_el)
 
+        if any(k in p for k in ["chiller", "hvac", "cooling tower"]) and not any("chiller" in el.get("name", "").lower() for el in model.get("layers", {}).get("electrical", {}).get("elements", [])):
+            chiller_el = {
+                "id": uid("hvac_chiller"),
+                "layer_id": "electrical",
+                "type": "fixture",
+                "name": "Rooftop Commercial HVAC Chiller Plant & Acoustic Screening",
+                "position": [-6.0, total_h + 1.2, 0],
+                "dimensions": {"width": 4.5, "height": 2.2, "depth": 3.5},
+                "material": {"color": "#475569"}
+            }
+            model.setdefault("layers", {}).setdefault("electrical", {}).setdefault("elements", []).append(chiller_el)
+
+        if any(k in p for k in ["planter", "greenery", "plants", "biophilic"]) and not any("planter" in el.get("name", "").lower() for el in model.get("layers", {}).get("structural", {}).get("elements", [])):
+            for f in range(min(5, current_floors)):
+                planter_el = {
+                    "id": uid(f"planter_L{f+1}"),
+                    "layer_id": "structural",
+                    "type": "fixture",
+                    "name": f"Level {f+1} Cantilevered Biophilic Planter Box",
+                    "position": [0, f * h_floor + 0.6, 9.5],
+                    "dimensions": {"width": 8.0, "height": 0.6, "depth": 0.6},
+                    "material": {"color": "#15803D", "roughness": 0.95}
+                }
+                model.setdefault("layers", {}).setdefault("structural", {}).setdefault("elements", []).append(planter_el)
+
+        # 6. Synchronize version, generated_elements, and metadata
+        model["version"] = int(uuid.uuid4().int % 1000000)
+        model["generated_elements"] = [el for layer in model.get("layers", {}).values() for el in layer.get("elements", [])]
         return model
 
     def synthesize_model(self, prompt: str, project_id: int = 1) -> Dict[str, Any]:
