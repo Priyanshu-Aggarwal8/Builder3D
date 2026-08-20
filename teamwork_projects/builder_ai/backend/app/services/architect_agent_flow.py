@@ -227,6 +227,7 @@ class ArchitectConversationAgent:
             return {
                 "session_id": state.session_id,
                 "message": ai_text,
+                "is_inquiry": True,
                 "model": current_model,  # Model preserved 100% unchanged!
                 "brief": {
                     "project_name": model_name,

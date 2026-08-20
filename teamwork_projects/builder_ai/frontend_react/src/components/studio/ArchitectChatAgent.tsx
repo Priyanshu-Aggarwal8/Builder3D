@@ -197,7 +197,7 @@ export const ArchitectChatAgent: React.FC<ArchitectChatAgentProps> = ({
 
       setMessages((prev) => [...prev, agentMessage]);
 
-      if (data.model) {
+      if (data.model && !data.is_inquiry) {
         const cleanModel = sanitizeBuildingModel(data.model);
         onApplyModel(cleanModel);
       }

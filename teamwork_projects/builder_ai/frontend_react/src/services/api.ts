@@ -104,6 +104,7 @@ export function sanitizeBuildingModel(raw: any): BuildingModel {
   // Unpack nested model if response wrapper is passed
   const target = raw.model && typeof raw.model === 'object' ? raw.model : raw;
 
+  // Initialize result with all standard 6 OpenBIM semantic layers
   const result: BuildingModel = {
     id: typeof target.id === 'number' ? target.id : 1,
     name: target.name || "Custom Architectural Model",
@@ -111,15 +112,26 @@ export function sanitizeBuildingModel(raw: any): BuildingModel {
     description: target.description || "",
     meta: target.meta || (raw.meta ? raw.meta : undefined),
     layers: {
-      structural: { id: "structural", name: "Structural Layer", visible: true, color: "#D4FF32", elements: [] },
-      electrical: { id: "electrical", name: "Electrical Layer", visible: true, color: "#F59E0B", elements: [] },
-      plumbing: { id: "plumbing", name: "Plumbing Layer", visible: true, color: "#06B6D4", elements: [] },
+      structural: { id: "structural", name: "Structural Framework", visible: true, color: "#D4FF32", elements: [] },
+      architecture: { id: "architecture", name: "Architectural Shell", visible: true, color: "#E2E8F0", elements: [] },
+      furniture: { id: "furniture", name: "Interior Furnishings", visible: true, color: "#A78BFA", elements: [] },
+      fixtures: { id: "fixtures", name: "Sanitary & Kitchen Fixtures", visible: true, color: "#F43F5E", elements: [] },
+      electrical: { id: "electrical", name: "Electrical & Lighting", visible: true, color: "#F59E0B", elements: [] },
+      plumbing: { id: "plumbing", name: "Plumbing & Drainage", visible: true, color: "#06B6D4", elements: [] },
     },
   };
 
   const sanitizeElement = (el: any, fallbackLayer = 'structural'): ModelElement => {
-    const layer = (el.layerId || el.layer_id || fallbackLayer).toLowerCase();
-    const cleanLayer = (layer.includes('elec') ? 'electrical' : layer.includes('plumb') ? 'plumbing' : 'structural');
+    const rawLayer = (el.layerId || el.layer_id || fallbackLayer).toLowerCase();
+    let cleanLayer = 'structural';
+
+    if (rawLayer.includes('elec') || rawLayer.includes('light')) cleanLayer = 'electrical';
+    else if (rawLayer.includes('plumb') || rawLayer.includes('pipe') || rawLayer.includes('drain')) cleanLayer = 'plumbing';
+    else if (rawLayer.includes('furn') || rawLayer.includes('desk') || rawLayer.includes('chair') || rawLayer.includes('sofa') || rawLayer.includes('bed')) cleanLayer = 'furniture';
+    else if (rawLayer.includes('fixt') || rawLayer.includes('sanit') || rawLayer.includes('sink') || rawLayer.includes('vanity') || rawLayer.includes('tub')) cleanLayer = 'fixtures';
+    else if (rawLayer.includes('arch') || rawLayer.includes('wall') || rawLayer.includes('window') || rawLayer.includes('door') || rawLayer.includes('mullion') || rawLayer.includes('curtain')) cleanLayer = 'architecture';
+    else if (rawLayer.includes('struct') || rawLayer.includes('slab') || rawLayer.includes('column') || rawLayer.includes('core')) cleanLayer = 'structural';
+    else cleanLayer = rawLayer;
 
     const pos = Array.isArray(el.position) && el.position.length >= 3
       ? [Number(el.position[0]) || 0, Number(el.position[1]) || 0, Number(el.position[2]) || 0] as [number, number, number]
@@ -150,30 +162,52 @@ export function sanitizeBuildingModel(raw: any): BuildingModel {
     };
   };
 
-  if (raw.layers && typeof raw.layers === 'object') {
-    for (const [key, layer] of Object.entries(raw.layers as Record<string, any>)) {
-      const cleanKey = (key.includes('elec') ? 'electrical' : key.includes('plumb') ? 'plumbing' : 'structural');
+  // 1. If structured layers exist on target
+  if (target.layers && typeof target.layers === 'object') {
+    for (const [key, layer] of Object.entries(target.layers as Record<string, any>)) {
       if (layer && Array.isArray(layer.elements)) {
         layer.elements.forEach((el: any) => {
-          result.layers[cleanKey].elements.push(sanitizeElement(el, cleanKey));
+          const cleanEl = sanitizeElement(el, key);
+          if (!result.layers[cleanEl.layerId]) {
+            result.layers[cleanEl.layerId] = {
+              id: cleanEl.layerId,
+              name: `${cleanEl.layerId.charAt(0).toUpperCase() + cleanEl.layerId.slice(1)} Layer`,
+              visible: true,
+              color: "#E2E8F0",
+              elements: [],
+            };
+          }
+          result.layers[cleanEl.layerId].elements.push(cleanEl);
         });
       }
     }
     return result;
   }
 
-  const rawElements = Array.isArray(raw)
-    ? raw
+  // 2. If flat elements list exists
+  const rawElements = Array.isArray(target)
+    ? target
+    : Array.isArray(target.generated_elements)
+    ? target.generated_elements
+    : Array.isArray(target.elements)
+    ? target.elements
     : Array.isArray(raw.generated_elements)
     ? raw.generated_elements
-    : Array.isArray(raw.elements)
-    ? raw.elements
     : [];
 
   if (rawElements.length > 0) {
     rawElements.forEach((el: any) => {
       const cleanEl = sanitizeElement(el);
-      result.layers[cleanEl.layerId as 'structural' | 'electrical' | 'plumbing'].elements.push(cleanEl);
+      if (!result.layers[cleanEl.layerId]) {
+        result.layers[cleanEl.layerId] = {
+          id: cleanEl.layerId,
+          name: `${cleanEl.layerId.charAt(0).toUpperCase() + cleanEl.layerId.slice(1)} Layer`,
+          visible: true,
+          color: "#E2E8F0",
+          elements: [],
+        };
+      }
+      result.layers[cleanEl.layerId].elements.push(cleanEl);
     });
     return result;
   }
